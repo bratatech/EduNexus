@@ -1,0 +1,11 @@
+[
+  { "id": "default", "name": "Default", "url": "", "preview": "" },
+  { "id": "galaxy", "name": "Galaxy", "url": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=300&q=60" },
+  { "id": "mountains", "name": "Mountains", "url": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&q=60" },
+  { "id": "ocean", "name": "Ocean", "url": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=300&q=60" },
+  { "id": "forest", "name": "Dark Forest", "url": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1448375240586-882707db888b?w=300&q=60" },
+  { "id": "aurora", "name": "Aurora", "url": "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?w=300&q=60" },
+  { "id": "city", "name": "Night City", "url": "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&q=60" },
+  { "id": "abstract", "name": "Abstract", "url": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=300&q=60" },
+  { "id": "space", "name": "Deep Space", "url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80", "preview": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=60" }
+]

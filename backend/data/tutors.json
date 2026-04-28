@@ -1,0 +1,8 @@
+[
+  { "name": "Maya Okafor", "subjects": "Calculus · Linear Algebra", "years": 7, "rating": 4.9, "bio": "MIT mathematics PhD candidate. Specialises in unblocking students stuck on proofs and abstract concepts." },
+  { "name": "Daniel Reyes", "subjects": "Physics · IB / A-Level", "years": 9, "rating": 4.8, "bio": "Former CERN researcher turned teacher. Makes mechanics and EM feel obvious." },
+  { "name": "Sofia Lindqvist", "subjects": "Spanish · French", "years": 6, "rating": 5.0, "bio": "Polyglot tutor based in Berlin. Conversation-first, grammar-when-you-need-it." },
+  { "name": "Arjun Patel", "subjects": "Python · DSA · Web Dev", "years": 5, "rating": 4.9, "bio": "Senior engineer at a Series-B startup. Coaches beginners and CS undergrads alike." },
+  { "name": "Nora Brennan", "subjects": "Chemistry · Biology", "years": 11, "rating": 4.9, "bio": "Veteran A-Level tutor with a knack for diagrams that finally make organic chem click." },
+  { "name": "Tomás Ribeiro", "subjects": "SAT · IB · A-Level", "years": 8, "rating": 4.8, "bio": "Test-prep strategist. Built the diagnostic engine behind our matching system." }
+]

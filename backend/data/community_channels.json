@@ -1,0 +1,8 @@
+[
+  { "id": "general", "name": "general", "icon": "💬", "unread": 3 },
+  { "id": "web3", "name": "web3", "icon": "🔗", "unread": 1 },
+  { "id": "ai-ml", "name": "ai-ml", "icon": "🤖", "unread": 0 },
+  { "id": "help", "name": "help", "icon": "❓", "unread": 5 },
+  { "id": "random", "name": "random", "icon": "🎲", "unread": 2 },
+  { "id": "showcase", "name": "showcase", "icon": "🌟", "unread": 0 }
+]

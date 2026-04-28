@@ -1,0 +1,31 @@
+{
+  "general": [
+    { "id": 1, "user": "System", "avatar": "🤖", "text": "Welcome to EduNexuZ Community! 🎉 This is the general channel.", "time": "09:00", "type": "system" },
+    { "id": 2, "user": "Alex Chen", "avatar": "👨‍💻", "text": "Hey everyone! Just published the new Web3 module. Check it out in Courses!", "time": "09:15", "type": "text", "reactions": [{ "emoji": "🔥", "count": 5 }, { "emoji": "👏", "count": 3 }] },
+    { "id": 3, "user": "Crypto_Dave", "avatar": "🦊", "text": "Just completed the DeFi section! The interactive smart contract examples are 🔥", "time": "09:32", "type": "text", "reactions": [{ "emoji": "💯", "count": 2 }] },
+    { "id": 4, "user": "Dr. Sarah Kim", "avatar": "👩‍🔬", "text": "Reminder: AI/ML office hours today at 3pm in the Live Classroom. Bring your questions!", "time": "10:00", "type": "text" },
+    { "id": 5, "user": "AIenthusiast", "avatar": "🤖", "text": "Check out this neural network visualization I made:", "time": "10:15", "type": "text" },
+    { "id": 6, "user": "AIenthusiast", "avatar": "🤖", "text": "", "time": "10:15", "type": "image", "mediaUrl": "https://picsum.photos/400/250?random=1" },
+    { "id": 7, "user": "Emma Rodriguez", "avatar": "👩‍💼", "text": "Great work! The community is growing so fast 📈", "time": "10:30", "type": "text", "reactions": [{ "emoji": "❤️", "count": 7 }] }
+  ],
+  "web3": [
+    { "id": 100, "user": "System", "avatar": "🤖", "text": "Channel #web3 — Discuss blockchain, smart contracts, and decentralized tech", "time": "08:00", "type": "system" },
+    { "id": 101, "user": "Alex Chen", "avatar": "👨‍💻", "text": "Today's topic: Understanding gas fees on Ethereum vs Layer 2 solutions", "time": "09:00", "type": "text" },
+    { "id": 102, "user": "Crypto_Dave", "avatar": "🦊", "text": "I've been experimenting with Arbitrum. Gas costs are like 1/10th of mainnet!", "time": "09:20", "type": "text" }
+  ],
+  "ai-ml": [
+    { "id": 200, "user": "System", "avatar": "🤖", "text": "Channel #ai-ml — Machine learning, neural networks, and AI discussions", "time": "08:00", "type": "system" },
+    { "id": 201, "user": "Dr. Sarah Kim", "avatar": "👩‍🔬", "text": "New transformer architecture paper dropped. Thoughts?", "time": "11:00", "type": "text" }
+  ],
+  "help": [
+    { "id": 300, "user": "System", "avatar": "🤖", "text": "Channel #help — Get help from instructors and peers", "time": "08:00", "type": "system" },
+    { "id": 301, "user": "WebDev_Sara", "avatar": "💻", "text": "Can someone help me understand recursive backtracking?", "time": "14:00", "type": "text" }
+  ],
+  "random": [
+    { "id": 400, "user": "System", "avatar": "🤖", "text": "Channel #random — Off-topic fun! Share memes, music, and more", "time": "08:00", "type": "system" },
+    { "id": 401, "user": "Crypto_Dave", "avatar": "🦊", "text": "What do you call a programmer who doesn't use dark mode? A monster 😂", "time": "12:00", "type": "text", "reactions": [{ "emoji": "😂", "count": 12 }, { "emoji": "💀", "count": 4 }] }
+  ],
+  "showcase": [
+    { "id": 500, "user": "System", "avatar": "🤖", "text": "Channel #showcase — Share your projects, achievements, and creations!", "time": "08:00", "type": "system" }
+  ]
+}

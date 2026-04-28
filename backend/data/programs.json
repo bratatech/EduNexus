@@ -1,0 +1,17 @@
+[
+  { "cat": "math", "title": "Algebra Foundations", "level": "Secondary", "duration": "8 weeks", "format": "1-on-1 online", "desc": "Rebuild fluency with linear equations, functions and graphing through guided problem sets." },
+  { "cat": "math", "title": "Calculus Bootcamp", "level": "University", "duration": "10 weeks", "format": "1-on-1 online", "desc": "Limits, derivatives and integrals — paced for first-year STEM students who need traction fast." },
+  { "cat": "math", "title": "Geometry & Trig", "level": "Secondary", "duration": "6 weeks", "format": "Group online", "desc": "Visual reasoning, proofs, unit circle mastery. Small cohorts, weekly challenges." },
+  { "cat": "science", "title": "Physics: Mechanics", "level": "Secondary / IB", "duration": "8 weeks", "format": "1-on-1", "desc": "Newtonian mechanics with intuition-first explanations and exam-style problem drills." },
+  { "cat": "science", "title": "Chemistry Essentials", "level": "Secondary", "duration": "8 weeks", "format": "Online", "desc": "Stoichiometry, bonding, organic basics — taught with worked examples and spaced revision." },
+  { "cat": "science", "title": "Biology for A-Level", "level": "A-Level", "duration": "10 weeks", "format": "1-on-1", "desc": "Cell biology, genetics and ecology with mark-scheme-aligned exam technique." },
+  { "cat": "lang", "title": "Spanish Conversation", "level": "All levels", "duration": "Ongoing", "format": "1-on-1 online", "desc": "Native-speaker tutors, real conversations, structured grammar built around what you actually want to say." },
+  { "cat": "lang", "title": "French B1 → B2", "level": "Intermediate", "duration": "12 weeks", "format": "1-on-1", "desc": "Push past plateau with reading, writing and speaking workouts calibrated to DELF rubrics." },
+  { "cat": "lang", "title": "German Beginner", "level": "A0 → A2", "duration": "10 weeks", "format": "Group", "desc": "Practical German for travel, study and work — small group, weekly speaking labs." },
+  { "cat": "cs", "title": "Python from Zero", "level": "Beginner", "duration": "8 weeks", "format": "1-on-1 online", "desc": "Build real CLI tools and your first web scraper. No prior coding required." },
+  { "cat": "cs", "title": "Data Structures & Algorithms", "level": "University", "duration": "12 weeks", "format": "1-on-1", "desc": "Whiteboard-style sessions targeting university coursework and technical interviews." },
+  { "cat": "cs", "title": "Web Dev Crash Course", "level": "Beginner", "duration": "6 weeks", "format": "Group online", "desc": "HTML, CSS, JS and React fundamentals — ship a personal site by week six." },
+  { "cat": "prep", "title": "SAT Math + Verbal", "level": "High School", "duration": "12 weeks", "format": "1-on-1", "desc": "Diagnostic-led plan, weekly timed sections and detailed score-band tracking." },
+  { "cat": "prep", "title": "IB Diploma Support", "level": "IB DP", "duration": "Ongoing", "format": "1-on-1 online", "desc": "Subject-specific tutoring across HL/SL plus EE and IA mentoring." },
+  { "cat": "prep", "title": "A-Level Revision Sprint", "level": "Year 13", "duration": "6 weeks", "format": "1-on-1", "desc": "Targeted revision in your weakest topics, exam-board specific past-paper drills." }
+]

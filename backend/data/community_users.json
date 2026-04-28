@@ -1,0 +1,10 @@
+[
+  { "name": "Alex Chen", "avatar": "👨‍💻", "status": "online", "role": "Instructor" },
+  { "name": "Dr. Sarah Kim", "avatar": "👩‍🔬", "status": "online", "role": "Instructor" },
+  { "name": "Jordan Lee", "avatar": "🧑‍🎨", "status": "idle", "role": "Instructor" },
+  { "name": "Emma Rodriguez", "avatar": "👩‍💼", "status": "online", "role": "Instructor" },
+  { "name": "You", "avatar": "😎", "status": "online", "role": "Student" },
+  { "name": "Crypto_Dave", "avatar": "🦊", "status": "online", "role": "Student" },
+  { "name": "AIenthusiast", "avatar": "🤖", "status": "idle", "role": "Student" },
+  { "name": "WebDev_Sara", "avatar": "💻", "status": "offline", "role": "Student" }
+]

@@ -1,0 +1,6 @@
+[
+  { "id": "web3", "icon": "🔗", "title": "Web3 Fundamentals", "instructor": "Alex Chen", "description": "Learn blockchain basics, smart contracts, and DeFi fundamentals", "level": "Beginner", "duration": "6 weeks", "students": 234, "progress": 45, "reward": 500, "color": "#8b5cf6", "gradient": "from-violet-500/20 to-purple-600/20" },
+  { "id": "ai-ml", "icon": "🤖", "title": "AI & Machine Learning", "instructor": "Dr. Sarah Kim", "description": "Master neural networks, deep learning, and AI model training", "level": "Intermediate", "duration": "8 weeks", "students": 189, "progress": 0, "reward": 750, "color": "#06b6d4", "gradient": "from-cyan-500/20 to-blue-600/20" },
+  { "id": "metaverse", "icon": "🌐", "title": "Metaverse Development", "instructor": "Jordan Lee", "description": "Build immersive 3D worlds with WebXR and spatial computing", "level": "Advanced", "duration": "10 weeks", "students": 156, "progress": 0, "reward": 1000, "color": "#f59e0b", "gradient": "from-amber-500/20 to-orange-600/20" },
+  { "id": "marketing", "icon": "📱", "title": "Digital Marketing", "instructor": "Emma Rodriguez", "description": "SEO, social media strategy, and growth hacking techniques", "level": "Beginner", "duration": "4 weeks", "students": 312, "progress": 60, "reward": 300, "color": "#ec4899", "gradient": "from-pink-500/20 to-rose-600/20" }
+]

@@ -1,0 +1,9 @@
+{
+  "readme.txt": "EduNexuZ — Warm tutoring for the connected generation.\nMath · Sciences · Languages · CS · Test prep.\nFree diagnostic call. Vetted tutors. Matched in 24h.",
+  "profile.txt": "Operator: guest\nRole: Student\nJoined: Today\nCourses: 0",
+  "programs/": "algebra-foundations/  calculus-bootcamp/  physics-mechanics/  python-from-zero/  web3-fundamentals/",
+  "instructors/": "mira-k.txt  diego-r.txt  sana-a.txt  theo-v.txt  alex-chen.txt  dr-sarah-kim.txt",
+  "courses/": "web3-fundamentals/  ai-ml/  metaverse-dev/  digital-marketing/",
+  ".bashrc": "# EduNexuZ bash config\nexport PS1=\"operator@edunexuz:~$ \"\nexport EDITOR=nano\nalias ll=\"ls -la\"\nalias cls=clear",
+  ".hidden_secret": "🎉 You found the easter egg! ctOS access level: UNLIMITED"
+}
