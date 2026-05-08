@@ -1,1 +1,43 @@
-[]
+[
+    {
+        "class_id": "c1",
+        "section_id": "s1",
+        "date": "2026-05-09",
+        "present": [
+            {
+                "student_id": "s101",
+                "student_name": "John Doe"
+            },
+            {
+                "student_id": "s102",
+                "student_name": "Jane Smith"
+            }
+        ],
+        "absent": [
+            {
+                "student_id": "s103",
+                "student_name": "Alice Johnson"
+            }
+        ]
+    },
+    {
+        "class_id": "c1",
+        "section_id": "s1",
+        "date": "2026-05-10",
+        "present": [
+            {
+                "student_id": "s101",
+                "student_name": "John Doe"
+            },
+            {
+                "student_id": "s102",
+                "student_name": "Jane Smith"
+            },
+            {
+                "student_id": "s103",
+                "student_name": "Alice Johnson"
+            }
+        ],
+        "absent": []
+    }
+]

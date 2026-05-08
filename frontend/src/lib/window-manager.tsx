@@ -12,7 +12,8 @@ export type WindowId =
   | "courses"
   | "classroom"
   | "community"
-  | "profile";
+  | "profile"
+  | "summarizer";
 
 export interface WindowState {
   id: WindowId;
@@ -163,6 +164,16 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 260, y: 90 },
     size: { w: 700, h: 540 },
     minSize: { w: 400, h: 350 },
+  },
+  summarizer: {
+    id: "summarizer",
+    title: "Document Summarizer — Gemini",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    position: { x: 180, y: 80 },
+    size: { w: 980, h: 620 },
+    minSize: { w: 720, h: 480 },
   },
 };
 

@@ -72,6 +72,45 @@ export async function apiFetch(
   return data;
 }
 
+export async function apiFetchForm(
+  path: string,
+  {
+    method = "POST",
+    form,
+    auth = false,
+    headers,
+  }: {
+    method?: string;
+    form: FormData;
+    auth?: boolean;
+    headers?: Record<string, string>;
+  }
+): Promise<unknown> {
+  const h: Record<string, string> = { ...(headers || {}) };
+  if (auth) {
+    const token = getToken();
+    if (token) h.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: h,
+    body: form,
+  });
+
+  const text = await res.text();
+  const data: unknown = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const code = (data && typeof data === "object" && "error" in (data as any) ? (data as any).error : null) as
+      | string
+      | null;
+    const err: ApiError = new Error(code || `http_${res.status}`) as ApiError;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
 export interface AuthUser {
   wallet: string;
   name?: string | null;
@@ -201,5 +240,24 @@ export const api = {
   },
   communityAddReaction: async (channelId: string, messageId: number, emoji: string): Promise<{ ok: boolean }> => {
     return (await apiFetch(`/api/community/reactions/${channelId}/${messageId}`, { method: "POST", body: { emoji }, auth: true })) as { ok: boolean };
+  },
+
+  aiDocumentsList: async (): Promise<{ data: unknown[] }> => {
+    return (await apiFetch("/api/ai/documents", { auth: true })) as { data: unknown[] };
+  },
+  aiDocumentsSummarize: async ({
+    file,
+    title,
+    classroomId,
+  }: {
+    file: File;
+    title?: string;
+    classroomId?: string;
+  }): Promise<{ ok: boolean; data: unknown }> => {
+    const form = new FormData();
+    form.append("document", file);
+    if (title) form.append("title", title);
+    if (classroomId) form.append("classroomId", classroomId);
+    return (await apiFetchForm("/api/ai/documents/summarize", { form, auth: true })) as { ok: boolean; data: unknown };
   },
 };
