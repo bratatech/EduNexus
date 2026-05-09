@@ -6,6 +6,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
+import dotenv from "dotenv";
+dotenv.config();
 
 export function aiRouter({ db }) {
   const r = express.Router();
@@ -17,7 +19,14 @@ export function aiRouter({ db }) {
   }
 
   function getGeminiModelName() {
-    return process.env.GOOGLE_AI_MODEL || config.googleAiModel || "gemini-1.5-flash";
+    const wanted = process.env.GOOGLE_AI_MODEL || config.googleAiModel || "";
+    const fallback = "gemini-2.5-flash";
+    const model = String(wanted || fallback).trim();
+
+    // The @google/generative-ai SDK uses the v1beta endpoint. Some model names may exist
+    // in other API versions but not in v1beta/generateContent. Ensure we don't crash on startup.
+    if (/^gemini-3\./i.test(model)) return fallback;
+    return model || fallback;
   }
 
   function getGeminiModel() {
@@ -70,8 +79,21 @@ export function aiRouter({ db }) {
       `Document text:\n` +
       text;
 
-    const result = await model.generateContent(prompt);
-    const out = result?.response?.text?.() || "";
+    let out = "";
+    try {
+      const result = await model.generateContent(prompt);
+      out = result?.response?.text?.() || "";
+    } catch (e) {
+      // If the configured model doesn't exist for v1beta/generateContent, retry with fallback.
+      if (e && typeof e === "object" && "status" in e && e.status === 404) {
+        const fallbackModel = getGeminiClient()?.getGenerativeModel({ model: "gemini-2.5-flash" }) || null;
+        if (!fallbackModel) throw e;
+        const result = await fallbackModel.generateContent(prompt);
+        out = result?.response?.text?.() || "";
+      } else {
+        throw e;
+      }
+    }
     let parsed;
     try {
       parsed = JSON.parse(out);
@@ -199,8 +221,20 @@ export function aiRouter({ db }) {
       return res.status(501).json({ error: "gemini_not_configured" });
     }
 
-    const result = await model.generateContent(parsed.data.prompt);
-    const text = result?.response?.text?.() || "";
+    let text = "";
+    try {
+      const result = await model.generateContent(parsed.data.prompt);
+      text = result?.response?.text?.() || "";
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status === 404) {
+        const fallbackModel = getGeminiClient()?.getGenerativeModel({ model: "gemini-2.5-flash" }) || null;
+        if (!fallbackModel) return res.status(502).json({ error: "gemini_model_not_supported" });
+        const result = await fallbackModel.generateContent(parsed.data.prompt);
+        text = result?.response?.text?.() || "";
+      } else {
+        throw e;
+      }
+    }
     return res.json({ answer: text });
   });
 

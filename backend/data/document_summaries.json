@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "cbf59f27-4912-41d5-a620-31517f8cfc5d",
+    "wallet": "soumya",
+    "filename": "Cormen.pdf",
+    "mimetype": "application/pdf",
+    "title": "Cormen.pdf",
+    "classroom_id": null,
+    "created_at": "2026-05-09T16:58:54.609Z",
+    "summary": "```json\n{\n  \"title\": \"Unreadable Document Content\",\n  \"summary\": \"The provided document appears to be a raw internal representation of a PDF file, consisting solely of technical metadata such as object references, page counts, and resource pointers (e.g., fonts, images, content streams). There is no extractable human-readable text, figures, tables, or other content that would allow for a meaningful summary of its subject matter, despite the filename suggesting it might be related to 'Cormen' (likely 'Introduction to Algorithms'). Without accessible content, it's impossible to discern any definitions, concepts, or specific information that would typically be found in a study document.\",\n  \"highlightedNotes\": [\n    {\n      \"note\": \"The document provided is a PDF metadata dump and contains no extractable human-readable content.\",\n      \"importance\": \"high\"\n    },\n    {\n      \"note\": \"It lists internal PDF object references like '/Outlines', '/PageLabels', '/Pages', and '/Type /Catalog'.\",\n      \"importance\": \"medium\"\n    },\n    {\n      \"note\": \"Page structure information is present, showing the total number of pages ('/Count 1312') and their individual object references.\",\n      \"importance\": \"medium\"\n    },\n    {\n      \"note\": \"Resource information for pages indicates types of content, such as '/ProcSet [/PDF /ImageC]' for images and '/ProcSet [/PDF /Text]' for text.\",\n      \"importance\": \"low\"\n    },\n    {\n      \"note\": \"Outline entries for 'Contents' and 'Index' are present, but their actual content is not readable.\",\n      \"importance\": \"medium\"\n    },\n    {\n      \"note\": \"A JavaScript action is embedded to print the document, specified by '/JS (this.print\\\\({bUI:true,bSilent:false,bShrinkToFit:true}\\\\);)'.\",\n      \"importance\": \"low\"\n    }\n  ]\n}\n```",
+    "highlighted_notes": []
+  }
+]
