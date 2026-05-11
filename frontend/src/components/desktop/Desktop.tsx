@@ -19,6 +19,7 @@ import { LiveClassroomWindow } from "./windows/LiveClassroomWindow";
 import { CommunityWindow } from "./windows/CommunityWindow";
 import { ProfileWindow } from "./windows/ProfileWindow";
 import { DocumentSummarizerWindow } from "./windows/DocumentSummarizerWindow";
+import { AITutorWindow } from "./windows/AITutorWindow";
 import { Toaster } from "@/components/ui/sonner";
 import { api, setToken } from "@/lib/api";
 
@@ -182,6 +183,7 @@ function DesktopInner({ initialOpen }: { initialOpen?: WindowId }) {
         <CommunityWindow />
         <ProfileWindow />
         <DocumentSummarizerWindow />
+        <AITutorWindow />
 
         <Dock />
       </main>

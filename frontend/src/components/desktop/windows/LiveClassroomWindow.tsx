@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState, useRef, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Environment } from "@react-three/drei";
 import { Window } from "../Window";
-import { Mic, MicOff, Video, VideoOff, Hand, MessageSquare, Monitor, LogOut } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Hand, MessageSquare, Monitor, LogOut, Download, Volume2 } from "lucide-react";
 import * as THREE from "three";
 import { io, type Socket } from "socket.io-client";
 import { api } from "@/lib/api";
+import jsPDF from "jspdf";
 
 // 3D Classroom Scene Components
 
@@ -273,6 +274,36 @@ interface ChatMsg {
   time: string;
 }
 
+type TutorMsg = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: number;
+};
+
+function normalizeTtsText(text: string) {
+  const t = String(text || "").replace(/\s+$/g, "").trim();
+  if (!t) return "";
+  return t.slice(0, 3900);
+}
+
+function getUserWallet() {
+  try {
+    const raw = localStorage.getItem("edunexuz-user");
+    if (!raw) return "guest";
+    const u = JSON.parse(raw);
+    return String(u?.wallet || u?.username || u?.id || "guest");
+  } catch {
+    return "guest";
+  }
+}
+
+function safeFilename(name: string) {
+  const n = (name || "tutor-chat").trim();
+  const cleaned = n.replace(/[^a-z0-9\-_. ]/gi, "_").slice(0, 80).trim();
+  return cleaned || "tutor-chat";
+}
+
 export function LiveClassroomWindow() {
   const [muted, setMuted] = useState(true);
   const [videoOn, setVideoOn] = useState(false);
@@ -289,10 +320,13 @@ export function LiveClassroomWindow() {
   const [localPreviewStream, setLocalPreviewStream] = useState<MediaStream | null>(null);
 
   const [aiPrompt, setAiPrompt] = useState("");
-  const [aiAnswer, setAiAnswer] = useState("");
+  const [tutorMsgs, setTutorMsgs] = useState<TutorMsg[]>([]);
   const [aiBusy, setAiBusy] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [tutorError, setTutorError] = useState<string>("");
+  const wallet = useMemo(() => getUserWallet(), []);
+  const tutorStorageKey = useMemo(() => `edunexuz-tutor-history:${wallet}:classroom`, [wallet]);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<BlobPart[]>([]);
 
@@ -312,6 +346,108 @@ export function LiveClassroomWindow() {
   useEffect(() => {
     iceServersRef.current = iceServers;
   }, [iceServers]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(tutorStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const normalized: TutorMsg[] = parsed
+          .filter((x) => x && typeof x === "object")
+          .map((x) => ({
+            id: String((x as any).id || `${Date.now()}-m`),
+            role: (String((x as any).role) === "assistant" ? "assistant" : "user") as TutorMsg["role"],
+            text: String((x as any).text || ""),
+            createdAt: Number((x as any).createdAt || Date.now()),
+          }))
+          .filter((m) => m.text.trim().length > 0);
+        setTutorMsgs(normalized.slice(-60));
+      }
+    } catch {
+      // ignore
+    }
+  }, [tutorStorageKey]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(tutorStorageKey, JSON.stringify(tutorMsgs.slice(-60)));
+    } catch {
+      // ignore
+    }
+  }, [tutorMsgs, tutorStorageKey]);
+
+  function downloadTutorPdf() {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 48;
+    let y = margin;
+
+    function ensureSpace(nextH: number) {
+      if (y + nextH <= pageH - margin) return;
+      doc.addPage();
+      y = margin;
+    }
+
+    function addLines(lines: string[], lineH: number) {
+      for (const line of lines) {
+        ensureSpace(lineH);
+        doc.text(line, margin, y);
+        y += lineH;
+      }
+    }
+
+    function addTitle(text: string) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      const lines = doc.splitTextToSize(text, pageW - margin * 2);
+      doc.setTextColor(20);
+      addLines(lines, 20);
+      y += 10;
+    }
+
+    function addLine(label: string, value: string) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(70);
+      ensureSpace(16);
+      doc.text(label, margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(30);
+      doc.text(value, margin + 80, y);
+      y += 16;
+    }
+
+    function addMsg(role: string, text: string) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(40);
+      ensureSpace(18);
+      doc.text(role, margin, y);
+      y += 14;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(20);
+      const lines = doc.splitTextToSize(text, pageW - margin * 2);
+      addLines(lines, 14);
+      y += 10;
+    }
+
+    addTitle("AI Tutor Chat (Live Classroom)");
+    addLine("User:", wallet);
+    addLine("Export:", new Date().toLocaleString());
+    y += 8;
+
+    if (!tutorMsgs.length) {
+      addMsg("(empty)", "No messages.");
+    } else {
+      tutorMsgs.forEach((m) => addMsg(m.role === "user" ? "YOU" : "TUTOR", m.text));
+    }
+
+    doc.save(`${safeFilename(`ai-tutor-chat-classroom-${wallet}`)}.pdf`);
+  }
 
   useEffect(() => {
     socketPathRef.current = socketPath;
@@ -605,12 +741,25 @@ export function LiveClassroomWindow() {
   async function askTutor() {
     if (!aiPrompt.trim()) return;
     setAiBusy(true);
-    setAiAnswer("");
+    setTutorError("");
+    const q = aiPrompt.trim();
+    const qMsg: TutorMsg = { id: `${Date.now()}-q`, role: "user", text: q, createdAt: Date.now() };
+    setTutorMsgs((prev) => [...prev, qMsg].slice(-50));
+    setAiPrompt("");
     try {
-      const r = await api.aiTutor(aiPrompt.trim());
-      setAiAnswer(r.answer || "");
+      const r = await api.aiTutor(q);
+      const a = String(r?.answer || "").trim();
+      const aMsg: TutorMsg = { id: `${Date.now()}-a`, role: "assistant", text: a || "(empty answer)", createdAt: Date.now() };
+      setTutorMsgs((prev) => [...prev, aMsg].slice(-50));
     } catch (e: any) {
-      setAiAnswer(`AI error: ${e?.message || "unknown_error"}`);
+      setTutorError(String(e?.message || "unknown_error"));
+      const aMsg: TutorMsg = {
+        id: `${Date.now()}-e`,
+        role: "assistant",
+        text: `AI error: ${String(e?.message || "unknown_error")}`,
+        createdAt: Date.now(),
+      };
+      setTutorMsgs((prev) => [...prev, aMsg].slice(-50));
     } finally {
       setAiBusy(false);
     }
@@ -619,18 +768,29 @@ export function LiveClassroomWindow() {
   async function speak(text: string) {
     if (!text.trim()) return;
     setVoiceBusy(true);
+    setTutorError("");
     try {
-      const r = (await api.aiVoiceTts(text)) as any;
+      const safeText = normalizeTtsText(text);
+      if (!safeText) {
+        setTutorError("missing_text");
+        return;
+      }
+      const r = (await api.aiVoiceTts(safeText)) as any;
       const b64 = r?.audioBase64;
       const mime = r?.audioMime || "audio/mpeg";
-      if (!b64) return;
+      if (!b64) {
+        setTutorError("voice_unavailable");
+        return;
+      }
       const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       const blob = new Blob([bin], { type: mime });
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      await audio.play();
       audio.onended = () => URL.revokeObjectURL(url);
-    } catch {
+      audio.onerror = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch (e: any) {
+      setTutorError(String(e?.message || "voice_playback_failed"));
     } finally {
       setVoiceBusy(false);
     }
@@ -649,19 +809,10 @@ export function LiveClassroomWindow() {
         setVoiceBusy(true);
         try {
           const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
-          const fd = new FormData();
-          fd.append("audio", blob, "audio.webm");
-          const base = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
-          let token = "";
-          try { token = localStorage.getItem("edunexuz-token") || ""; } catch {}
-          const resp = await fetch(`${base}/api/ai/voice/stt`, {
-            method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-            body: fd,
-          });
-          const data = await resp.json();
-          if (resp.ok && data?.transcript) setTranscript(data.transcript);
-          else setTranscript(`Voice error: ${data?.error || resp.status}`);
+          const data = await api.aiVoiceStt({ audio: blob, filename: "audio.webm" });
+          const t = String((data as any)?.transcript || "").trim();
+          setTranscript(t);
+          if (t) setAiPrompt(t);
         } catch (e: any) {
           setTranscript(`Voice error: ${e?.message || "unknown_error"}`);
         } finally {
@@ -851,6 +1002,59 @@ export function LiveClassroomWindow() {
 
               <div className="pt-3 mt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
                 <div className="text-[10px] uppercase tracking-wider text-amber-400 font-mono mb-2">AI Tutor</div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Explain this like I'm 12",
+                      "Give me step-by-step",
+                      "Give 3 examples",
+                      "Common mistakes",
+                    ].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setAiPrompt((p) => (p ? `${p}\n\n${s}` : s))}
+                        className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={downloadTutorPdf}
+                    disabled={!tutorMsgs.length}
+                    className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 disabled:opacity-60"
+                    title="Download chat as PDF"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Download className="h-3.5 w-3.5" />
+                      PDF
+                    </span>
+                  </button>
+                </div>
+
+                <div className="rounded-md p-2 mb-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <div className="max-h-44 overflow-auto space-y-2 pr-1">
+                    {tutorMsgs.length === 0 ? (
+                      <div className="text-[11px] text-gray-500">Ask a question to start a tutor chat.</div>
+                    ) : (
+                      tutorMsgs.map((m) => (
+                        <div
+                          key={m.id}
+                          className={`text-[11px] leading-relaxed whitespace-pre-wrap ${m.role === "user" ? "text-amber-200" : "text-gray-300"}`}
+                        >
+                          <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mr-2">
+                            {m.role === "user" ? "YOU" : "TUTOR"}
+                          </span>
+                          {m.text}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <input
                     value={aiPrompt}
@@ -868,21 +1072,35 @@ export function LiveClassroomWindow() {
                     {aiBusy ? "..." : "Ask"}
                   </button>
                 </div>
-                {aiAnswer && (
-                  <div className="mt-2 text-xs text-gray-400 leading-relaxed">
-                    {aiAnswer}
-                    <div className="mt-2 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => speak(aiAnswer)}
-                        disabled={voiceBusy}
-                        className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 disabled:opacity-60"
-                      >
-                        {voiceBusy ? "..." : "TTS"}
-                      </button>
-                    </div>
+                {tutorError ? (
+                  <div className="mt-2 text-[10px] text-red-400 font-mono">{tutorError}</div>
+                ) : null}
+
+                {tutorMsgs.length ? (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const last = [...tutorMsgs].reverse().find((m) => m.role === "assistant");
+                        if (last?.text) void speak(last.text);
+                      }}
+                      disabled={voiceBusy}
+                      className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 disabled:opacity-60"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        <Volume2 className="h-3.5 w-3.5" />
+                        {voiceBusy ? "..." : "Speak"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTutorMsgs([])}
+                      className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10"
+                    >
+                      Clear
+                    </button>
                   </div>
-                )}
+                ) : null}
 
                 <div className="mt-3 text-[10px] uppercase tracking-wider text-cyan-400 font-mono mb-2">Voice</div>
                 <div className="flex items-center gap-2">

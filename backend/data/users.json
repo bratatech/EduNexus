@@ -16,5 +16,50 @@
     "password_hash": "$2a$10$8uKmGl.bHx4TP0aGeL/MWO2aO9ntduVRv7bhfeu3VQ5PrabC0jM6O",
     "xp": 0,
     "created_at": "2026-04-30T11:32:30.185Z"
+  },
+  {
+    "id": 3,
+    "wallet": "debnil",
+    "name": "debnil",
+    "email": "debnil1@gmail.com",
+    "password_hash": "$2a$10$T20bhBpRFG3e4mf/mbw70u1BiCtsohRk0/1zHwXUquHw7yaLgQfam",
+    "xp": 0,
+    "created_at": "2026-05-11T13:48:07.728Z"
+  },
+  {
+    "id": 4,
+    "wallet": "test_04954408",
+    "name": "test_04954408",
+    "email": "test_04954408@example.com",
+    "password_hash": "$2a$10$6SFwqBTVC7WWjBw3n/05xu7790qkVyey0e0fTiaGX6QCjnOsgWKAi",
+    "xp": 0,
+    "created_at": "2026-05-11T13:48:43.115Z"
+  },
+  {
+    "id": 5,
+    "wallet": "testuser",
+    "name": "Test",
+    "email": "test@test.com",
+    "password_hash": "$2a$10$tKBtbLmiYsFTAmFmN.OQNeDTlhEaSNEBc9Lj.10KPMDB7oa03kogG",
+    "xp": 0,
+    "created_at": "2026-05-11T14:58:34.201Z"
+  },
+  {
+    "id": 6,
+    "wallet": "demouser",
+    "name": "demouser",
+    "email": "demo@example.com",
+    "password_hash": "$2a$10$67G4btQ4JccOPJO3MKeKeeZPxEilxciH2b/Z82ELvbMCD1cB77W1e",
+    "xp": 0,
+    "created_at": "2026-05-11T15:47:28.121Z"
+  },
+  {
+    "id": 7,
+    "wallet": "debnil@gmail.com",
+    "name": "debnil@gmail.com",
+    "email": "debnil@gmail.com",
+    "password_hash": "$2a$10$4NbNKQn2.sCSYJZIZEYIMuj1QnvRVluHpCrQ3NQ5FpyraPNcon9li",
+    "xp": 0,
+    "created_at": "2026-05-11T16:31:43.408Z"
   }
 ]

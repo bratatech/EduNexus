@@ -12,6 +12,7 @@ const DOCK: { id: WindowId; label: string; Icon: React.ComponentType<{ className
   { id: "terminal", label: "Terminal", Icon: TerminalSquare },
   { id: "courses", label: "Courses", Icon: Layers },
   { id: "classroom", label: "Classroom", Icon: GraduationCap },
+  { id: "tutor", label: "AI Tutor", Icon: Sparkles },
   { id: "summarizer", label: "Summarizer", Icon: Sparkles },
   { id: "community", label: "Community", Icon: MessageCircle },
   { id: "profile", label: "Profile", Icon: UserCircle },

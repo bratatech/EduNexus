@@ -15,7 +15,7 @@ export const config = {
 
   // AI providers (optional)
   googleAiApiKey: process.env.GOOGLE_AI_API_KEY || "",
-  googleAiModel: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash",
+  googleAiModel: process.env.GOOGLE_AI_MODEL || "gemini-2.5-flash",
 
   aiTutorProvider: (process.env.AI_TUTOR_PROVIDER || "gemini").toLowerCase(), // gemini|ollama
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",

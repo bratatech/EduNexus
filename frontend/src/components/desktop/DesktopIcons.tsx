@@ -13,6 +13,7 @@ const ICONS: { id: WindowId; label: string; Icon: React.ComponentType<{ classNam
   { id: "settings", label: "Settings", Icon: SettingsIcon },
   { id: "courses", label: "Courses", Icon: BookOpen },
   { id: "classroom", label: "Classroom", Icon: GraduationCap },
+  { id: "tutor", label: "AI Tutor", Icon: Sparkles },
   { id: "summarizer", label: "Summarizer", Icon: Sparkles },
   { id: "community", label: "Community", Icon: MessageCircle },
   { id: "profile", label: "profile.txt", Icon: UserCircle },

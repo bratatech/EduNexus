@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Window } from "../Window";
-import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Shield, Plus, X, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Shield, Plus, X, Search, ExternalLink } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface Tab {
@@ -74,7 +74,7 @@ export function FirefoxWindow() {
         finalUrl = "https://" + finalUrl;
       } else {
         // Search query
-        finalUrl = `https://www.google.com/search?igu=1&q=${encodeURIComponent(finalUrl)}`;
+        finalUrl = `https://duckduckgo.com/?q=${encodeURIComponent(finalUrl)}`;
       }
     }
 
@@ -222,6 +222,20 @@ export function FirefoxWindow() {
             <Search className="h-3.5 w-3.5 text-gray-500" />
           </form>
 
+          <button
+            type="button"
+            onClick={() => {
+              if (!currentTab?.url) return;
+              try {
+                window.open(currentTab.url, "_blank", "noopener,noreferrer");
+              } catch {}
+            }}
+            className="text-gray-400 hover:text-white"
+            title="Open in new tab"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </button>
+
           <button className="text-gray-400 hover:text-white">
             <Star className="h-4 w-4" />
           </button>
@@ -250,6 +264,8 @@ export function FirefoxWindow() {
               title={currentTab.title}
               className="absolute inset-0 w-full h-full border-0"
               sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
+              referrerPolicy="no-referrer"
+              allow="clipboard-read; clipboard-write"
               onLoad={() => {
                 updateTab(currentTab.id, {
                   loading: false,

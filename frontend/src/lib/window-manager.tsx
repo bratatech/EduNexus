@@ -13,6 +13,7 @@ export type WindowId =
   | "classroom"
   | "community"
   | "profile"
+  | "tutor"
   | "summarizer";
 
 export interface WindowState {
@@ -164,6 +165,16 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 260, y: 90 },
     size: { w: 700, h: 540 },
     minSize: { w: 400, h: 350 },
+  },
+  tutor: {
+    id: "tutor",
+    title: "AI Tutor — EduNexuZ",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    position: { x: 160, y: 70 },
+    size: { w: 860, h: 600 },
+    minSize: { w: 520, h: 420 },
   },
   summarizer: {
     id: "summarizer",

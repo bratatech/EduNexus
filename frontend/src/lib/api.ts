@@ -153,6 +153,10 @@ export interface AiVoiceTtsResponse {
   audioMime: string;
 }
 
+export interface AiVoiceSttMultipartResponse {
+  transcript: string;
+}
+
 export interface RealtimeConfigResponse {
   ok: boolean;
   socketPath: string;
@@ -219,6 +223,18 @@ export const api = {
   },
   aiVoiceTts: async (text: string): Promise<AiVoiceTtsResponse> => {
     return (await apiFetch("/api/ai/voice/tts", { method: "POST", body: { text }, auth: true })) as AiVoiceTtsResponse;
+  },
+
+  aiVoiceStt: async ({
+    audio,
+    filename,
+  }: {
+    audio: Blob;
+    filename?: string;
+  }): Promise<AiVoiceSttMultipartResponse> => {
+    const form = new FormData();
+    form.append("audio", audio, filename || "audio.webm");
+    return (await apiFetchForm("/api/ai/voice/stt", { form, auth: true })) as AiVoiceSttMultipartResponse;
   },
 
   realtimeConfig: async (): Promise<RealtimeConfigResponse> => {

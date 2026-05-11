@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Window } from "../Window";
 import { api } from "@/lib/api";
-import { UploadCloud, Loader2, Sparkles, FileText, RefreshCcw, Save } from "lucide-react";
+import { UploadCloud, Loader2, Sparkles, FileText, RefreshCcw, Save, Download } from "lucide-react";
+import jsPDF from "jspdf";
 
 type Importance = "high" | "medium" | "low";
 
@@ -19,6 +20,115 @@ interface DocSummaryRow {
   created_at: string;
   summary: string;
   highlighted_notes: HighlightedNote[];
+}
+
+function normalizeSummaryText(input: string) {
+  const s = String(input || "").trim();
+  if (!s) return "";
+
+  if (s.startsWith("{") && s.includes("\"summary\"")) {
+    try {
+      const obj = JSON.parse(s);
+      if (obj && typeof obj === "object" && typeof obj.summary === "string") {
+        return String(obj.summary || "").trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return s;
+}
+
+function stripInlineMarkdown(s: string) {
+  return s
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .trim();
+}
+
+function NotesView({ text }: { text: string }) {
+  const lines = useMemo(() => {
+    const raw = normalizeSummaryText(text);
+    return raw
+      .split(/\r?\n/)
+      .map((l) => stripInlineMarkdown(l.trimEnd()))
+      .filter((l) => l.trim().length > 0);
+  }, [text]);
+
+  const blocks = useMemo(() => {
+    const out: Array<{ kind: "h" | "li" | "p"; text: string }> = [];
+    for (const line of lines) {
+      const t = line.trim();
+      const isHeading =
+        /^(\d+\)|\d+\.|[A-Z][A-Za-z0-9 &/\-]{2,}:)$/.test(t) ||
+        /^(Overview|Key concepts|Key Concepts|Definitions|Processes|Steps|Examples|Applications|Pitfalls|Common mistakes)/.test(
+          t
+        );
+
+      if (isHeading) {
+        out.push({ kind: "h", text: t.replace(/:$/, "") });
+        continue;
+      }
+
+      const bullet = t.match(/^([-*]|\d+\.)\s+(.*)$/);
+      if (bullet) {
+        out.push({ kind: "li", text: bullet[2] });
+        continue;
+      }
+
+      out.push({ kind: "p", text: t });
+    }
+    return out;
+  }, [lines]);
+
+  let listKey = 0;
+  const rendered: React.ReactNode[] = [];
+  for (let i = 0; i < blocks.length; i += 1) {
+    const b = blocks[i];
+    if (b.kind === "li") {
+      const items: string[] = [];
+      let j = i;
+      while (j < blocks.length && blocks[j].kind === "li") {
+        items.push(blocks[j].text);
+        j += 1;
+      }
+      rendered.push(
+        <ul key={`ul-${listKey++}`} className="mt-2 ml-5 list-disc space-y-1 text-sm text-foreground/90">
+          {items.map((it, idx) => (
+            <li key={idx} className="leading-relaxed">
+              {it}
+            </li>
+          ))}
+        </ul>
+      );
+      i = j - 1;
+      continue;
+    }
+
+    if (b.kind === "h") {
+      rendered.push(
+        <div key={`h-${i}`} className="mt-4 first:mt-0">
+          <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{b.text}</div>
+        </div>
+      );
+      continue;
+    }
+
+    rendered.push(
+      <p key={`p-${i}`} className="mt-2 text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+        {b.text}
+      </p>
+    );
+  }
+
+  if (rendered.length === 0) {
+    return <div className="text-sm text-muted-foreground">No summary returned.</div>;
+  }
+
+  return <div>{rendered}</div>;
 }
 
 function importanceStyle(importance: Importance) {
@@ -53,6 +163,105 @@ function formatWhen(iso: string) {
   } catch {
     return iso;
   }
+}
+
+function safeFilename(name: string) {
+  const n = (name || "summary").trim();
+  const cleaned = n.replace(/[^a-z0-9\-_. ]/gi, "_").slice(0, 80).trim();
+  return cleaned || "summary";
+}
+
+function downloadSummaryPdf(row: DocSummaryRow) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  const margin = 48;
+  let y = margin;
+
+  function addTitle(text: string) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    const lines = doc.splitTextToSize(text, pageW - margin * 2);
+    doc.text(lines, margin, y);
+    y += lines.length * 22;
+  }
+
+  function addMeta(label: string, value: string) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(70);
+    doc.text(label, margin, y);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(30);
+    doc.text(value, margin + 90, y);
+    y += 16;
+  }
+
+  function ensureSpace(nextH: number) {
+    if (y + nextH <= pageH - margin) return;
+    doc.addPage();
+    y = margin;
+  }
+
+  function addSectionHeading(text: string) {
+    ensureSpace(28);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(20);
+    doc.text(text, margin, y);
+    y += 18;
+    doc.setDrawColor(220);
+    doc.line(margin, y, pageW - margin, y);
+    y += 14;
+  }
+
+  function addParagraph(text: string) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(30);
+    const lines = doc.splitTextToSize(text || "", pageW - margin * 2);
+    const blockH = lines.length * 14;
+    ensureSpace(blockH + 6);
+    doc.text(lines, margin, y);
+    y += blockH + 6;
+  }
+
+  function importanceLabel(imp: Importance) {
+    if (imp === "high") return "HIGH";
+    if (imp === "low") return "LOW";
+    return "MED";
+  }
+
+  addTitle(row.title || row.filename || "Document Summary");
+  addMeta("Filename:", row.filename || "(unknown)");
+  addMeta("Created:", formatWhen(row.created_at || ""));
+  y += 10;
+
+  addSectionHeading("Summary");
+  addParagraph(row.summary || "");
+
+  addSectionHeading("Highlighted Notes");
+  const notes = Array.isArray(row.highlighted_notes) ? row.highlighted_notes : [];
+  if (!notes.length) {
+    addParagraph("No highlighted notes were returned.");
+  } else {
+    notes.forEach((n, i) => {
+      const tag = importanceLabel(n.importance);
+      const prefix = `${String(i + 1).padStart(2, "0")}. [${tag}] `;
+      const lines = doc.splitTextToSize(prefix + (n.note || ""), pageW - margin * 2);
+      const blockH = lines.length * 14;
+      ensureSpace(blockH + 6);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(30);
+      doc.text(lines, margin, y);
+      y += blockH + 6;
+    });
+  }
+
+  const base = safeFilename(row.title || row.filename || "summary");
+  doc.save(`${base}.pdf`);
 }
 
 export function DocumentSummarizerWindow() {
@@ -112,7 +321,15 @@ export function DocumentSummarizerWindow() {
         setFile(null);
       }
     } catch (e: any) {
-      setError(e?.message || "summarize_failed");
+      const code = e?.message || "summarize_failed";
+      const friendly: Record<string, string> = {
+        gemini_unavailable: "Gemini AI is currently unreachable. Please check your API key or try again later.",
+        gemini_not_configured: "Gemini AI is not configured. Set GOOGLE_AI_API_KEY in the backend .env file.",
+        gemini_busy: "Gemini AI is overloaded. Please wait a moment and try again.",
+        document_text_unreadable: "Could not extract text from this file. Try a plain .txt file.",
+        missing_document: "No document file was attached. Please select a file first.",
+      };
+      setError(friendly[code] || code);
     } finally {
       setBusySummarize(false);
     }
@@ -255,8 +472,21 @@ export function DocumentSummarizerWindow() {
                   <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Output</div>
                   <div className="text-sm text-foreground">Saved summary</div>
                 </div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {selected ? formatWhen(selected.created_at) : ""}
+                <div className="flex items-center gap-2">
+                  {selected ? (
+                    <button
+                      type="button"
+                      onClick={() => downloadSummaryPdf(selected)}
+                      className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-border bg-surface hover:border-primary/60 hover:text-primary transition-colors"
+                      title="Download as PDF"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span className="font-mono text-xs uppercase tracking-widest">Download PDF</span>
+                    </button>
+                  ) : null}
+                  <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {selected ? formatWhen(selected.created_at) : ""}
+                  </div>
                 </div>
               </div>
 
@@ -274,7 +504,9 @@ export function DocumentSummarizerWindow() {
 
                   <div className="border border-border bg-surface/60 p-4">
                     <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Summary</div>
-                    <div className="mt-2 text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">{selected.summary}</div>
+                    <div className="mt-2">
+                      <NotesView text={selected.summary} />
+                    </div>
                   </div>
 
                   <div className="border border-border bg-surface/60 p-4">
