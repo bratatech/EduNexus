@@ -53,7 +53,10 @@ export function StudentCharacter({ student, isPresent, onMark }: StudentProps) {
       bodyRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.4 + student.id * 1.3) * 0.02;
     }
     if (glowRef.current && isPresent) {
-      glowRef.current.material.opacity = 0.15 + Math.sin(state.clock.elapsedTime * 2) * 0.08;
+      const mat = glowRef.current.material;
+      if (mat && !Array.isArray(mat)) {
+        (mat as THREE.MeshBasicMaterial).opacity = 0.15 + Math.sin(state.clock.elapsedTime * 2) * 0.08;
+      }
     }
   });
 
