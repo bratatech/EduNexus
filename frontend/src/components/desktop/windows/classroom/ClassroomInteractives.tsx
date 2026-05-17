@@ -12,6 +12,7 @@ export interface StudentData {
   benchPos: [number, number, number];
 }
 
+/* eslint-disable-next-line react-refresh/only-export-components */
 export const STUDENTS: StudentData[] = [
   { id: 0, name: "Alex", color: "#c07040", benchPos: [-5, 0, -2] },
   { id: 1, name: "Jordan", color: "#907050", benchPos: [-2, 0, -2] },
@@ -135,7 +136,7 @@ export function StudentCharacter({ student, isPresent, onMark }: StudentProps) {
 
       {/* Attendance glow ring (shows when present) */}
       {isPresent && (
-        <mesh ref={glowRef as any} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh ref={glowRef} position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[0.35, 0.5, 32]} />
           <meshBasicMaterial color="#4ade80" transparent opacity={0.2} side={THREE.DoubleSide} />
         </mesh>
@@ -194,7 +195,7 @@ export function CameraAnimation() {
 // Smartboard with YouTube embed
 export function Smartboard() {
   const videoUrl = typeof import.meta !== "undefined"
-    ? (import.meta as any).env?.VITE_YOUTUBE_VIDEO_URL || "https://www.youtube.com/embed/dQw4w9WgXcQ"
+    ? import.meta.env?.VITE_YOUTUBE_VIDEO_URL || "https://www.youtube.com/embed/dQw4w9WgXcQ"
     : "https://www.youtube.com/embed/dQw4w9WgXcQ";
 
   return (
