@@ -10,13 +10,14 @@ function waitForServer(proc) {
     const timeout = setTimeout(() => reject(new Error("server_start_timeout")), 15000);
     proc.stdout.on("data", (buf) => {
       const s = buf.toString("utf8");
+      console.log("[spawn stdout]", s);
       if (s.includes("listening")) {
         clearTimeout(timeout);
         resolve();
       }
     });
-    proc.stderr.on("data", () => {
-      // ignore
+    proc.stderr.on("data", (buf) => {
+      console.error("[spawn stderr]", buf.toString("utf8"));
     });
     proc.on("exit", (code) => {
       clearTimeout(timeout);
