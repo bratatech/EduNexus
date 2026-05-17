@@ -1,272 +1,20 @@
-import { useEffect, useMemo, useState, useRef, Suspense } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Text, Environment } from "@react-three/drei";
+import { useState, useCallback, Suspense } from "react";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
 import { Window } from "../Window";
-import { Mic, MicOff, Video, VideoOff, Hand, MessageSquare, Monitor, LogOut, Download, Volume2 } from "lucide-react";
-import * as THREE from "three";
-import { io, type Socket } from "socket.io-client";
-import { api } from "@/lib/api";
-import jsPDF from "jspdf";
+import { useWindowManager } from "@/lib/window-manager";
+import { Mic, MicOff, Video, VideoOff, Hand, MessageSquare, Monitor, LogOut, RotateCcw, Users } from "lucide-react";
 
-// 3D Classroom Scene Components
+import { Floor, Walls, ClassroomLights, Bench, TeacherDesk, DustParticles } from "./classroom/ClassroomEnvironment";
+import {
+  STUDENTS,
+  StudentCharacter,
+  CameraAnimation,
+  Smartboard,
+  CelebrationParticles,
+} from "./classroom/ClassroomInteractives";
 
-function Floor() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
-      <planeGeometry args={[20, 16]} />
-      <meshStandardMaterial color="#2a2520" roughness={0.8} />
-    </mesh>
-  );
-}
-
-function Walls() {
-  return (
-    <group>
-      {/* Back wall */}
-      <mesh position={[0, 4, -8]} receiveShadow>
-        <planeGeometry args={[20, 8]} />
-        <meshStandardMaterial color="#1e1a16" />
-      </mesh>
-      {/* Left wall */}
-      <mesh position={[-10, 4, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[16, 8]} />
-        <meshStandardMaterial color="#221e1a" />
-      </mesh>
-      {/* Right wall */}
-      <mesh position={[10, 4, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[16, 8]} />
-        <meshStandardMaterial color="#221e1a" />
-      </mesh>
-      {/* Ceiling */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 8, 0]}>
-        <planeGeometry args={[20, 16]} />
-        <meshStandardMaterial color="#181614" />
-      </mesh>
-    </group>
-  );
-}
-
-function Whiteboard() {
-  return (
-    <group position={[0, 4.5, -7.9]}>
-      {/* Board frame */}
-      <mesh>
-        <boxGeometry args={[10, 4.5, 0.1]} />
-        <meshStandardMaterial color="#3a3530" />
-      </mesh>
-      {/* Board surface */}
-      <mesh position={[0, 0, 0.06]}>
-        <planeGeometry args={[9.6, 4.1]} />
-        <meshStandardMaterial color="#1a2a1a" roughness={0.3} />
-      </mesh>
-      {/* Text on whiteboard */}
-      <Text
-        position={[-3.5, 1.2, 0.12]}
-        fontSize={0.35}
-        color="#e8d5c0"
-        anchorX="left"
-        font="https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4xD-IQ-PuZJJXxfpAO-Lfjk.woff"
-      >
-        EduNexuZ — Live Session
-      </Text>
-      <Text
-        position={[-3.5, 0.5, 0.12]}
-        fontSize={0.25}
-        color="#f0a35a"
-        anchorX="left"
-      >
-        Topic: Introduction to Web3
-      </Text>
-      <Text
-        position={[-3.5, -0.1, 0.12]}
-        fontSize={0.2}
-        color="#88a088"
-        anchorX="left"
-      >
-        {`• Blockchain fundamentals
-• Smart contracts overview  
-• DeFi protocols`}
-      </Text>
-    </group>
-  );
-}
-
-function Desk({ position, color = "#4a3a2a" }: { position: [number, number, number]; color?: string }) {
-  return (
-    <group position={position}>
-      {/* Desktop surface */}
-      <mesh position={[0, 0.75, 0]} castShadow>
-        <boxGeometry args={[1.4, 0.06, 0.8]} />
-        <meshStandardMaterial color={color} roughness={0.6} />
-      </mesh>
-      {/* Legs */}
-      {[[-0.6, 0, -0.3], [0.6, 0, -0.3], [-0.6, 0, 0.3], [0.6, 0, 0.3]].map((pos, i) => (
-        <mesh key={i} position={[pos[0], 0.375, pos[2]]} castShadow>
-          <boxGeometry args={[0.05, 0.75, 0.05]} />
-          <meshStandardMaterial color="#2a2520" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function Chair({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position}>
-      {/* Seat */}
-      <mesh position={[0, 0.45, 0]} castShadow>
-        <boxGeometry args={[0.5, 0.05, 0.5]} />
-        <meshStandardMaterial color="#333028" />
-      </mesh>
-      {/* Back */}
-      <mesh position={[0, 0.8, -0.22]} castShadow>
-        <boxGeometry args={[0.5, 0.7, 0.04]} />
-        <meshStandardMaterial color="#333028" />
-      </mesh>
-      {/* Legs */}
-      {[[-0.2, 0, -0.2], [0.2, 0, -0.2], [-0.2, 0, 0.2], [0.2, 0, 0.2]].map((pos, i) => (
-        <mesh key={i} position={[pos[0], 0.225, pos[2]]}>
-          <boxGeometry args={[0.03, 0.45, 0.03]} />
-          <meshStandardMaterial color="#1a1816" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function StudentAvatar({ position, color }: { position: [number, number, number]; color: string }) {
-  const ref = useRef<THREE.Group>(null!);
-
-  useFrame((state) => {
-    if (ref.current) {
-      // Subtle idle animation
-      ref.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5 + position[0]) * 0.05;
-      ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.8 + position[2]) * 0.01;
-    }
-  });
-
-  return (
-    <group ref={ref} position={position}>
-      {/* Head */}
-      <mesh position={[0, 1.6, 0]} castShadow>
-        <sphereGeometry args={[0.18, 16, 16]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      {/* Body */}
-      <mesh position={[0, 1.2, 0]} castShadow>
-        <boxGeometry args={[0.35, 0.5, 0.2]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-    </group>
-  );
-}
-
-function TeacherDesk() {
-  return (
-    <group position={[0, 0, -6]}>
-      <mesh position={[0, 0.85, 0]} castShadow>
-        <boxGeometry args={[3, 0.08, 1]} />
-        <meshStandardMaterial color="#5a4a3a" roughness={0.5} />
-      </mesh>
-      {[[-1.3, 0, -0.4], [1.3, 0, -0.4], [-1.3, 0, 0.4], [1.3, 0, 0.4]].map((pos, i) => (
-        <mesh key={i} position={[pos[0], 0.425, pos[2]]}>
-          <boxGeometry args={[0.06, 0.85, 0.06]} />
-          <meshStandardMaterial color="#3a3020" />
-        </mesh>
-      ))}
-      {/* Monitor on desk */}
-      <mesh position={[0, 1.3, -0.2]} castShadow>
-        <boxGeometry args={[0.8, 0.5, 0.03]} />
-        <meshStandardMaterial color="#111" />
-      </mesh>
-      <mesh position={[0, 1.3, -0.19]}>
-        <planeGeometry args={[0.75, 0.45]} />
-        <meshStandardMaterial color="#1a2a3a" emissive="#1a2a3a" emissiveIntensity={0.3} />
-      </mesh>
-    </group>
-  );
-}
-
-function DustParticles() {
-  const ref = useRef<THREE.Points>(null!);
-  const count = 200;
-
-  const positions = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) {
-    positions[i * 3] = (Math.random() - 0.5) * 18;
-    positions[i * 3 + 1] = Math.random() * 7 + 0.5;
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 14;
-  }
-
-  useFrame((state) => {
-    if (ref.current) {
-      ref.current.rotation.y = state.clock.elapsedTime * 0.02;
-      const arr = ref.current.geometry.attributes.position.array as Float32Array;
-      for (let i = 0; i < count; i++) {
-        arr[i * 3 + 1] += Math.sin(state.clock.elapsedTime + i) * 0.001;
-      }
-      ref.current.geometry.attributes.position.needsUpdate = true;
-    }
-  });
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial size={0.03} color="#f0a35a" transparent opacity={0.4} sizeAttenuation />
-    </points>
-  );
-}
-
-function ClassroomScene() {
-  const STUDENT_COLORS = ["#c07040", "#907050", "#b08060", "#a06848", "#8a6050", "#c88060"];
-  const deskPositions: [number, number, number][] = [
-    [-4, 0, -2], [-1.5, 0, -2], [1.5, 0, -2], [4, 0, -2],
-    [-4, 0, 1], [-1.5, 0, 1], [1.5, 0, 1], [4, 0, 1],
-    [-4, 0, 4], [-1.5, 0, 4], [1.5, 0, 4], [4, 0, 4],
-  ];
-
-  return (
-    <>
-      <ambientLight intensity={0.3} color="#f0d0a0" />
-      <directionalLight position={[5, 8, 3]} intensity={0.6} color="#ffe8c0" castShadow />
-      <pointLight position={[0, 7, -6]} intensity={0.8} color="#f0a35a" distance={15} />
-      <pointLight position={[-8, 5, 0]} intensity={0.3} color="#a0c0f0" distance={12} />
-      <pointLight position={[8, 5, 0]} intensity={0.3} color="#a0c0f0" distance={12} />
-
-      <Floor />
-      <Walls />
-      <Whiteboard />
-      <TeacherDesk />
-
-      {deskPositions.map((pos, i) => (
-        <group key={i}>
-          <Desk position={pos} />
-          <Chair position={[pos[0], 0, pos[2] + 0.7]} />
-          {i < 8 && (
-            <StudentAvatar
-              position={[pos[0], 0, pos[2] + 0.5]}
-              color={STUDENT_COLORS[i % STUDENT_COLORS.length]}
-            />
-          )}
-        </group>
-      ))}
-
-      <DustParticles />
-      <OrbitControls
-        makeDefault
-        minDistance={3}
-        maxDistance={18}
-        minPolarAngle={0.2}
-        maxPolarAngle={Math.PI / 2 - 0.1}
-        target={[0, 3, -2]}
-      />
-    </>
-  );
-}
-
-// Chat message component
+// Chat message type
 interface ChatMsg {
   id: number;
   user: string;
@@ -274,564 +22,51 @@ interface ChatMsg {
   time: string;
 }
 
-type TutorMsg = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  createdAt: number;
-};
-
-function normalizeTtsText(text: string) {
-  const t = String(text || "").replace(/\s+$/g, "").trim();
-  if (!t) return "";
-  return t.slice(0, 3900);
-}
-
-function getUserWallet() {
-  try {
-    const raw = localStorage.getItem("edunexuz-user");
-    if (!raw) return "guest";
-    const u = JSON.parse(raw);
-    return String(u?.wallet || u?.username || u?.id || "guest");
-  } catch {
-    return "guest";
-  }
-}
-
-function safeFilename(name: string) {
-  const n = (name || "tutor-chat").trim();
-  const cleaned = n.replace(/[^a-z0-9\-_. ]/gi, "_").slice(0, 80).trim();
-  return cleaned || "tutor-chat";
-}
-
 export function LiveClassroomWindow() {
+  const { close } = useWindowManager();
+
+  // Attendance state
+  const [presentIds, setPresentIds] = useState<Set<number>>(new Set());
+  const allPresent = presentIds.size === STUDENTS.length;
+
+  const markPresent = useCallback((id: number) => {
+    setPresentIds((prev) => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+  }, []);
+
+  const resetAttendance = useCallback(() => {
+    setPresentIds(new Set());
+  }, []);
+
+  // Controls state
   const [muted, setMuted] = useState(true);
   const [videoOn, setVideoOn] = useState(false);
   const [handRaised, setHandRaised] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [mediaOpen, setMediaOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
-  const [participants, setParticipants] = useState<number>(0);
-  const [memberIds, setMemberIds] = useState<string[]>([]);
-  const [localError, setLocalError] = useState<string>("");
-  const [localStreamReady, setLocalStreamReady] = useState(false);
-  const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
-  const [localPreviewStream, setLocalPreviewStream] = useState<MediaStream | null>(null);
-
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [tutorMsgs, setTutorMsgs] = useState<TutorMsg[]>([]);
-  const [aiBusy, setAiBusy] = useState(false);
-  const [voiceBusy, setVoiceBusy] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [tutorError, setTutorError] = useState<string>("");
-  const wallet = useMemo(() => getUserWallet(), []);
-  const tutorStorageKey = useMemo(() => `edunexuz-tutor-history:${wallet}:classroom`, [wallet]);
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<BlobPart[]>([]);
-
-  const socketRef = useRef<Socket | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const pcsRef = useRef<Record<string, RTCPeerConnection>>({});
-  const pendingIceRef = useRef<Record<string, RTCIceCandidateInit[]>>({});
-
-  const ROOM_ID = "classroom-web3";
-
-  const [iceServers, setIceServers] = useState<RTCIceServer[]>([{ urls: "stun:stun.l.google.com:19302" }]);
-  const [socketPath, setSocketPath] = useState<string>("/socket.io");
-  const iceServersRef = useRef<RTCIceServer[]>(iceServers);
-  const socketPathRef = useRef<string>(socketPath);
-  const [realtimeReady, setRealtimeReady] = useState(false);
-
-  useEffect(() => {
-    iceServersRef.current = iceServers;
-  }, [iceServers]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(tutorStorageKey);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const normalized: TutorMsg[] = parsed
-          .filter((x) => x && typeof x === "object")
-          .map((x) => ({
-            id: String((x as any).id || `${Date.now()}-m`),
-            role: (String((x as any).role) === "assistant" ? "assistant" : "user") as TutorMsg["role"],
-            text: String((x as any).text || ""),
-            createdAt: Number((x as any).createdAt || Date.now()),
-          }))
-          .filter((m) => m.text.trim().length > 0);
-        setTutorMsgs(normalized.slice(-60));
-      }
-    } catch {
-      // ignore
-    }
-  }, [tutorStorageKey]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(tutorStorageKey, JSON.stringify(tutorMsgs.slice(-60)));
-    } catch {
-      // ignore
-    }
-  }, [tutorMsgs, tutorStorageKey]);
-
-  function downloadTutorPdf() {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const margin = 48;
-    let y = margin;
-
-    function ensureSpace(nextH: number) {
-      if (y + nextH <= pageH - margin) return;
-      doc.addPage();
-      y = margin;
-    }
-
-    function addLines(lines: string[], lineH: number) {
-      for (const line of lines) {
-        ensureSpace(lineH);
-        doc.text(line, margin, y);
-        y += lineH;
-      }
-    }
-
-    function addTitle(text: string) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(16);
-      const lines = doc.splitTextToSize(text, pageW - margin * 2);
-      doc.setTextColor(20);
-      addLines(lines, 20);
-      y += 10;
-    }
-
-    function addLine(label: string, value: string) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(70);
-      ensureSpace(16);
-      doc.text(label, margin, y);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(30);
-      doc.text(value, margin + 80, y);
-      y += 16;
-    }
-
-    function addMsg(role: string, text: string) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(40);
-      ensureSpace(18);
-      doc.text(role, margin, y);
-      y += 14;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      doc.setTextColor(20);
-      const lines = doc.splitTextToSize(text, pageW - margin * 2);
-      addLines(lines, 14);
-      y += 10;
-    }
-
-    addTitle("AI Tutor Chat (Live Classroom)");
-    addLine("User:", wallet);
-    addLine("Export:", new Date().toLocaleString());
-    y += 8;
-
-    if (!tutorMsgs.length) {
-      addMsg("(empty)", "No messages.");
-    } else {
-      tutorMsgs.forEach((m) => addMsg(m.role === "user" ? "YOU" : "TUTOR", m.text));
-    }
-
-    doc.save(`${safeFilename(`ai-tutor-chat-classroom-${wallet}`)}.pdf`);
-  }
-
-  useEffect(() => {
-    socketPathRef.current = socketPath;
-  }, [socketPath]);
-
-  async function ensureLocalStream() {
-    if (localStreamRef.current) return localStreamRef.current;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-      localStreamRef.current = stream;
-      setLocalStreamReady(true);
-      setLocalPreviewStream(new MediaStream(stream.getVideoTracks()));
-
-      stream.getAudioTracks().forEach((t) => (t.enabled = !muted));
-      stream.getVideoTracks().forEach((t) => (t.enabled = videoOn));
-
-      return stream;
-    } catch (e: any) {
-      setLocalError(e?.message || "media_permission_denied");
-      throw e;
-    }
-  }
-
-  function getOrCreatePc(peerId: string) {
-    const existing = pcsRef.current[peerId];
-    if (existing) return existing;
-
-    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
-    pcsRef.current[peerId] = pc;
-
-    pc.onicecandidate = (ev) => {
-      if (!ev.candidate) return;
-      socketRef.current?.emit("webrtc:signal", {
-        roomId: ROOM_ID,
-        to: peerId,
-        data: { type: "ice", candidate: ev.candidate.toJSON() },
-      });
-    };
-
-    pc.ontrack = (ev) => {
-      const [stream] = ev.streams;
-      if (!stream) return;
-      setRemoteStreams((prev) => ({ ...prev, [peerId]: stream }));
-    };
-
-    pc.onconnectionstatechange = () => {
-      const st = pc.connectionState;
-      if (st === "failed" || st === "closed" || st === "disconnected") {
-        setRemoteStreams((prev) => {
-          const { [peerId]: _, ...rest } = prev;
-          return rest;
-        });
-      }
-    };
-
-    return pc;
-  }
-
-  async function flushPendingIce(peerId: string) {
-    const pc = pcsRef.current[peerId];
-    if (!pc) return;
-    const list = pendingIceRef.current[peerId] || [];
-    if (!list.length) return;
-    for (const c of list) {
-      try {
-        await pc.addIceCandidate(c);
-      } catch {}
-    }
-    pendingIceRef.current[peerId] = [];
-  }
-
-  async function makeOffer(peerId: string) {
-    const pc = getOrCreatePc(peerId);
-    const stream = await ensureLocalStream();
-    for (const track of stream.getTracks()) {
-      const senders = pc.getSenders();
-      if (senders.some((s) => s.track?.kind === track.kind)) continue;
-      pc.addTrack(track, stream);
-    }
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socketRef.current?.emit("webrtc:signal", {
-      roomId: ROOM_ID,
-      to: peerId,
-      data: { type: "offer", sdp: offer.sdp },
-    });
-  }
-
-  useEffect(() => {
-    const base = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
-    let token = "";
-    try {
-      token = localStorage.getItem("edunexuz-token") || "";
-    } catch {}
-
-    let mounted = true;
-    let s: Socket | null = null;
-
-    const cleanup = () => {
-      mounted = false;
-      try {
-        s?.emit("room:leave", { roomId: ROOM_ID });
-        s?.disconnect();
-      } catch {}
-      socketRef.current = null;
-
-      Object.values(pcsRef.current).forEach((pc) => {
-        try {
-          pc.close();
-        } catch {}
-      });
-      pcsRef.current = {};
-      pendingIceRef.current = {};
-
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach((t) => t.stop());
-        localStreamRef.current = null;
-      }
-    };
-
-    (async () => {
-      let cfg: any = null;
-      try {
-        cfg = await api.realtimeConfig();
-        if (!mounted) return;
-        if (cfg?.iceServers?.length) setIceServers(cfg.iceServers);
-        if (cfg?.socketPath) setSocketPath(cfg.socketPath);
-
-        s = io(base, {
-          transports: ["websocket"],
-          auth: token ? { token: `Bearer ${token}` } : {},
-          path: cfg?.socketPath || "/socket.io",
-        });
-      } catch {
-        if (!mounted) return;
-        s = io(base, {
-          transports: ["websocket"],
-          auth: token ? { token: `Bearer ${token}` } : {},
-          path: "/socket.io",
-        });
-      }
-
-      if (!mounted) return;
-      if (cfg?.iceServers?.length) iceServersRef.current = cfg.iceServers;
-      if (cfg?.socketPath) socketPathRef.current = cfg.socketPath;
-      setRealtimeReady(true);
-
-      if (!mounted || !s) return;
-      socketRef.current = s;
-
-      const socket = s;
-
-    let name = "guest";
-    try {
-      const u = localStorage.getItem("edunexuz-user");
-      if (u) name = JSON.parse(u)?.username || "guest";
-    } catch {}
-
-    socket.emit("room:join", { roomId: ROOM_ID, name });
-
-    socket.on("presence", (p: { roomId: string; members: Array<any> }) => {
-      if (p.roomId !== ROOM_ID) return;
-      setParticipants(Array.isArray(p.members) ? p.members.length : 0);
-
-      const selfId = socket.id;
-      const ids = (Array.isArray(p.members) ? p.members.map((m) => m.id).filter(Boolean) : []) as string[];
-      setMemberIds(ids.filter((id) => id && id !== selfId));
-    });
-
-    socket.on("chat:history", (payload: { roomId: string; messages: ChatMsg[] }) => {
-      if (payload.roomId !== ROOM_ID) return;
-      setMessages(Array.isArray(payload.messages) ? payload.messages : []);
-    });
-
-    socket.on("chat:message", (payload: { roomId: string; message: ChatMsg }) => {
-      if (payload.roomId !== ROOM_ID) return;
-      setMessages((prev) => [...prev, payload.message].slice(-200));
-    });
-
-    socket.on("webrtc:signal", async (payload: { from: string; data: any }) => {
-      const from = payload.from;
-      const data = payload.data;
-      if (!from || !data) return;
-
-      const pc = getOrCreatePc(from);
-
-      if (data.type === "offer") {
-        const stream = await ensureLocalStream();
-        for (const track of stream.getTracks()) {
-          const senders = pc.getSenders();
-          if (senders.some((se) => se.track?.kind === track.kind)) continue;
-          pc.addTrack(track, stream);
-        }
-        await pc.setRemoteDescription({ type: "offer", sdp: data.sdp });
-        await flushPendingIce(from);
-        const ans = await pc.createAnswer();
-        await pc.setLocalDescription(ans);
-        socket.emit("webrtc:signal", { roomId: ROOM_ID, to: from, data: { type: "answer", sdp: ans.sdp } });
-      } else if (data.type === "answer") {
-        await pc.setRemoteDescription({ type: "answer", sdp: data.sdp });
-        await flushPendingIce(from);
-      } else if (data.type === "ice") {
-        const cand = data.candidate as RTCIceCandidateInit;
-        if (!pc.remoteDescription) {
-          pendingIceRef.current[from] = [...(pendingIceRef.current[from] || []), cand];
-        } else {
-          try {
-            await pc.addIceCandidate(cand);
-          } catch {}
-        }
-      }
-    });
-    })();
-
-    return cleanup;
-  }, []);
-
-  useEffect(() => {
-    if (!realtimeReady) return;
-    const selfId = socketRef.current?.id;
-    if (!selfId) return;
-    const peers = memberIds;
-    peers.forEach((pid) => {
-      if (!pcsRef.current[pid]) {
-        getOrCreatePc(pid);
-        if (String(selfId) > String(pid)) {
-          makeOffer(pid).catch(() => {});
-        }
-      }
-    });
-
-    Object.keys(pcsRef.current).forEach((pid) => {
-      if (!peers.includes(pid)) {
-        try {
-          pcsRef.current[pid]?.close();
-        } catch {}
-        delete pcsRef.current[pid];
-        setRemoteStreams((prev) => {
-          const { [pid]: _, ...rest } = prev;
-          return rest;
-        });
-      }
-    });
-  }, [memberIds]);
-
-  useEffect(() => {
-    if (!localStreamRef.current) return;
-    localStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !muted));
-  }, [muted]);
-
-  useEffect(() => {
-    if (!localStreamRef.current) return;
-    localStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = videoOn));
-  }, [videoOn]);
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { id: 1, user: "Alex Chen", text: "Welcome to today's session!", time: "10:00" },
+    { id: 2, user: "System", text: `${STUDENTS.length} students in classroom`, time: "10:01" },
+    { id: 3, user: "Jordan", text: "Excited to learn about smart contracts!", time: "10:02" },
+  ]);
 
   const sendMessage = () => {
     if (!chatInput.trim()) return;
-    socketRef.current?.emit("chat:send", {
-      roomId: ROOM_ID,
-      message: {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
         user: "You",
         text: chatInput.trim(),
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       },
-    });
+    ]);
     setChatInput("");
   };
-
-  async function toggleMic() {
-    if (muted) {
-      try {
-        await ensureLocalStream();
-        setMuted(false);
-      } catch {}
-    } else {
-      setMuted(true);
-    }
-  }
-
-  async function toggleVideo() {
-    if (!videoOn) {
-      try {
-        await ensureLocalStream();
-        setVideoOn(true);
-      } catch {}
-    } else {
-      setVideoOn(false);
-    }
-  }
-
-  async function askTutor() {
-    if (!aiPrompt.trim()) return;
-    setAiBusy(true);
-    setTutorError("");
-    const q = aiPrompt.trim();
-    const qMsg: TutorMsg = { id: `${Date.now()}-q`, role: "user", text: q, createdAt: Date.now() };
-    setTutorMsgs((prev) => [...prev, qMsg].slice(-50));
-    setAiPrompt("");
-    try {
-      const r = await api.aiTutor(q);
-      const a = String(r?.answer || "").trim();
-      const aMsg: TutorMsg = { id: `${Date.now()}-a`, role: "assistant", text: a || "(empty answer)", createdAt: Date.now() };
-      setTutorMsgs((prev) => [...prev, aMsg].slice(-50));
-    } catch (e: any) {
-      setTutorError(String(e?.message || "unknown_error"));
-      const aMsg: TutorMsg = {
-        id: `${Date.now()}-e`,
-        role: "assistant",
-        text: `AI error: ${String(e?.message || "unknown_error")}`,
-        createdAt: Date.now(),
-      };
-      setTutorMsgs((prev) => [...prev, aMsg].slice(-50));
-    } finally {
-      setAiBusy(false);
-    }
-  }
-
-  async function speak(text: string) {
-    if (!text.trim()) return;
-    setVoiceBusy(true);
-    setTutorError("");
-    try {
-      const safeText = normalizeTtsText(text);
-      if (!safeText) {
-        setTutorError("missing_text");
-        return;
-      }
-      const r = (await api.aiVoiceTts(safeText)) as any;
-      const b64 = r?.audioBase64;
-      const mime = r?.audioMime || "audio/mpeg";
-      if (!b64) {
-        setTutorError("voice_unavailable");
-        return;
-      }
-      const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      const blob = new Blob([bin], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => URL.revokeObjectURL(url);
-      audio.onerror = () => URL.revokeObjectURL(url);
-      await audio.play();
-    } catch (e: any) {
-      setTutorError(String(e?.message || "voice_playback_failed"));
-    } finally {
-      setVoiceBusy(false);
-    }
-  }
-
-  async function startRecording() {
-    try {
-      const stream = await ensureLocalStream();
-      const audioOnly = new MediaStream(stream.getAudioTracks());
-      const rec = new MediaRecorder(audioOnly, { mimeType: "audio/webm" });
-      recordedChunksRef.current = [];
-      rec.ondataavailable = (ev) => {
-        if (ev.data && ev.data.size > 0) recordedChunksRef.current.push(ev.data);
-      };
-      rec.onstop = async () => {
-        setVoiceBusy(true);
-        try {
-          const blob = new Blob(recordedChunksRef.current, { type: "audio/webm" });
-          const data = await api.aiVoiceStt({ audio: blob, filename: "audio.webm" });
-          const t = String((data as any)?.transcript || "").trim();
-          setTranscript(t);
-          if (t) setAiPrompt(t);
-        } catch (e: any) {
-          setTranscript(`Voice error: ${e?.message || "unknown_error"}`);
-        } finally {
-          setVoiceBusy(false);
-        }
-      };
-      recorderRef.current = rec;
-      rec.start();
-    } catch (e: any) {
-      setLocalError(e?.message || "recording_failed");
-    }
-  }
-
-  function stopRecording() {
-    try {
-      recorderRef.current?.stop();
-    } catch {}
-    recorderRef.current = null;
-  }
 
   return (
     <Window id="classroom">
@@ -842,87 +77,146 @@ export function LiveClassroomWindow() {
             fallback={
               <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
                 <div className="text-center">
-                  <div className="text-4xl mb-4 animate-pulse">🎓</div>
+                  <div className="text-5xl mb-4 animate-pulse">🎓</div>
                   <div className="text-amber-400 font-mono text-sm">Loading 3D Classroom...</div>
-                  <div
-                    className="mt-2 w-32 h-1 rounded-full overflow-hidden mx-auto"
-                    style={{ background: "#222" }}
-                  >
-                    <div className="h-full bg-amber-500 animate-pulse rounded-full" style={{ width: "60%" }} />
+                  <div className="mt-3 w-40 h-1.5 rounded-full overflow-hidden mx-auto" style={{ background: "#222" }}>
+                    <div className="h-full bg-amber-500 rounded-full animate-pulse" style={{ width: "60%" }} />
                   </div>
+                  <div className="text-gray-600 font-mono text-[10px] mt-2">Initializing Three.js scene</div>
                 </div>
               </div>
             }
           >
             <Canvas
               shadows
-              camera={{ position: [0, 6, 10], fov: 50 }}
+              camera={{ position: [0, 15, 25], fov: 50 }}
               style={{ background: "#0a0a0f" }}
             >
-              <ClassroomScene />
+              <CameraAnimation />
+              <ClassroomLights />
+              <Floor />
+              <Walls />
+              <Smartboard />
+              <TeacherDesk />
+
+              {/* Benches */}
+              {STUDENTS.map((s) => (
+                <Bench key={`bench-${s.id}`} position={s.benchPos} />
+              ))}
+
+              {/* Students */}
+              {STUDENTS.map((s) => (
+                <StudentCharacter
+                  key={s.id}
+                  student={s}
+                  isPresent={presentIds.has(s.id)}
+                  onMark={markPresent}
+                />
+              ))}
+
+              <DustParticles />
+              <CelebrationParticles active={allPresent} />
+
+              <OrbitControls
+                makeDefault
+                minDistance={4}
+                maxDistance={20}
+                minPolarAngle={0.2}
+                maxPolarAngle={Math.PI / 2 - 0.05}
+                target={[0, 3, -2]}
+              />
             </Canvas>
           </Suspense>
 
-          {/* Video overlay */}
-          {(localPreviewStream || Object.keys(remoteStreams).length > 0) && (
-            <div className="absolute top-12 right-3 z-20 w-[280px] max-w-[40vw]">
-              <div
-                className="rounded-lg p-2"
-                style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                <div className="text-[10px] uppercase tracking-wider text-gray-300 font-mono mb-2">media</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {localPreviewStream && <VideoTile stream={localPreviewStream} label="you" muted />}
-                  {Object.entries(remoteStreams)
-                    .slice(0, 3)
-                    .map(([peerId, stream]) => (
-                      <VideoTile key={peerId} stream={stream} label={peerId.slice(0, 4)} />
-                    ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {(localPreviewStream || Object.keys(remoteStreams).length > 0) && mediaOpen && (
-            <div className="absolute bottom-20 left-4 right-4 z-20 max-w-[920px]">
-              <div
-                className="rounded-lg p-3"
-                style={{ background: "rgba(0,0,0,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                <div className="text-[10px] uppercase tracking-wider text-gray-300 font-mono mb-2">viewport media</div>
-                <div className="grid grid-cols-3 gap-3">
-                  {localPreviewStream && <VideoTile stream={localPreviewStream} label="you" muted large />}
-                  {Object.entries(remoteStreams)
-                    .slice(0, 5)
-                    .map(([peerId, stream]) => (
-                      <VideoTile key={peerId} stream={stream} label={peerId.slice(0, 8)} large />
-                    ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Live badge */}
-          <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: "rgba(0,0,0,0.7)", border: "1px solid rgba(239,68,68,0.3)" }}>
+          {/* LIVE badge */}
+          <div
+            className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full"
+            style={{ background: "rgba(0,0,0,0.75)", border: "1px solid rgba(239,68,68,0.3)" }}
+          >
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
             <span className="text-red-400 text-xs font-mono uppercase tracking-wider">Live</span>
-            <span className="text-gray-500 text-xs">• {participants || 0} participants</span>
+            <span className="text-gray-500 text-xs">• {STUDENTS.length} students</span>
           </div>
 
-          {/* Controls */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full" style={{ background: "rgba(0,0,0,0.8)", border: "1px solid rgba(255,255,255,0.1)" }}>
+          {/* Attendance HUD */}
+          <div
+            className="absolute top-3 right-3 flex items-center gap-3 px-4 py-2 rounded-lg"
+            style={{ background: "rgba(0,0,0,0.75)", border: `1px solid ${allPresent ? "rgba(74,222,128,0.4)" : "rgba(240,163,90,0.2)"}` }}
+          >
+            <Users className="h-4 w-4 text-amber-400" />
+            <div className="font-mono text-xs">
+              <span className={allPresent ? "text-green-400" : "text-amber-400"}>
+                {presentIds.size}/{STUDENTS.length}
+              </span>
+              <span className="text-gray-500 ml-1.5">attendance</span>
+            </div>
+            {/* Progress bar */}
+            <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.1)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${(presentIds.size / STUDENTS.length) * 100}%`,
+                  background: allPresent
+                    ? "linear-gradient(90deg, #4ade80, #22c55e)"
+                    : "linear-gradient(90deg, #f0a35a, #f59e0b)",
+                }}
+              />
+            </div>
             <button
-              onClick={toggleMic}
+              onClick={resetAttendance}
+              title="Reset attendance"
+              className="grid place-items-center h-6 w-6 rounded-md hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+            >
+              <RotateCcw className="h-3 w-3" />
+            </button>
+          </div>
+
+          {/* All present banner */}
+          {allPresent && (
+            <div
+              className="absolute top-14 left-1/2 -translate-x-1/2 px-6 py-2.5 rounded-lg font-mono text-sm animate-bounce"
+              style={{
+                background: "linear-gradient(135deg, rgba(74,222,128,0.2), rgba(34,197,94,0.15))",
+                border: "1px solid rgba(74,222,128,0.4)",
+                color: "#4ade80",
+                textShadow: "0 0 12px rgba(74,222,128,0.4)",
+              }}
+            >
+              🎉 All Present! Full Attendance Achieved!
+            </div>
+          )}
+
+          {/* Instruction hint */}
+          {presentIds.size === 0 && (
+            <div
+              className="absolute bottom-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg font-mono text-[11px] text-gray-400"
+              style={{ background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              💡 Click on each student to mark attendance
+            </div>
+          )}
+
+          {/* Controls bar */}
+          <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full"
+            style={{ background: "rgba(0,0,0,0.85)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <button
+              onClick={() => setMuted(!muted)}
               className={`grid place-items-center h-10 w-10 rounded-full transition-all ${
-                muted ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-white/10 text-white border border-white/20"
+                muted
+                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                  : "bg-white/10 text-white border border-white/20"
               }`}
             >
               {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
             <button
-              onClick={toggleVideo}
+              onClick={() => setVideoOn(!videoOn)}
               className={`grid place-items-center h-10 w-10 rounded-full transition-all ${
-                !videoOn ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-white/10 text-white border border-white/20"
+                !videoOn
+                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                  : "bg-white/10 text-white border border-white/20"
               }`}
             >
               {videoOn ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
@@ -930,7 +224,9 @@ export function LiveClassroomWindow() {
             <button
               onClick={() => setHandRaised(!handRaised)}
               className={`grid place-items-center h-10 w-10 rounded-full transition-all ${
-                handRaised ? "bg-amber-500/20 text-amber-400 border border-amber-500/30" : "bg-white/10 text-white border border-white/20"
+                handRaised
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                  : "bg-white/10 text-white border border-white/20"
               }`}
             >
               <Hand className="h-4 w-4" />
@@ -938,31 +234,22 @@ export function LiveClassroomWindow() {
             <button
               onClick={() => setChatOpen(!chatOpen)}
               className={`grid place-items-center h-10 w-10 rounded-full transition-all ${
-                chatOpen ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-white/10 text-white border border-white/20"
+                chatOpen
+                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                  : "bg-white/10 text-white border border-white/20"
               }`}
             >
               <MessageSquare className="h-4 w-4" />
             </button>
             <div className="w-px h-6 bg-white/10 mx-1" />
-            <button
-              className="grid place-items-center h-10 w-10 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20"
-              onClick={() => setMediaOpen((v) => !v)}
-            >
+            <button className="grid place-items-center h-10 w-10 rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all">
               <Monitor className="h-4 w-4" />
             </button>
+            {/* Leave Classroom — closes window */}
             <button
-              className="grid place-items-center h-10 w-10 rounded-full bg-red-600 text-white hover:bg-red-700"
-              onClick={() => {
-                try {
-                  localStorage.removeItem("edunexuz-token");
-                  localStorage.removeItem("edunexuz-user");
-                  localStorage.removeItem("edunexuz-profile");
-                } catch {}
-                try {
-                  sessionStorage.removeItem("edunexuz-booted");
-                } catch {}
-                window.location.reload();
-              }}
+              onClick={() => close("classroom")}
+              title="Leave Classroom"
+              className="grid place-items-center h-10 w-10 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
             >
               <LogOut className="h-4 w-4" />
             </button>
@@ -971,27 +258,26 @@ export function LiveClassroomWindow() {
 
         {/* Chat sidebar */}
         {chatOpen && (
-          <div className="w-72 flex flex-col border-l" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(15,15,20,0.95)" }}>
+          <div
+            className="w-72 flex flex-col border-l"
+            style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(15,15,20,0.95)" }}
+          >
             <div className="px-4 py-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
               <h3 className="text-white text-sm font-medium">Chat</h3>
             </div>
             <div className="flex-1 overflow-auto p-3 space-y-3">
-              {localError && (
-                <div className="text-[10px] text-red-400 font-mono">{localError}</div>
-              )}
-
-              {Object.keys(remoteStreams).length > 0 && (
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  {Object.entries(remoteStreams).map(([peerId, stream]) => (
-                    <VideoTile key={peerId} stream={stream} label={peerId.slice(0, 4)} />
-                  ))}
-                </div>
-              )}
-
               {messages.map((msg) => (
                 <div key={msg.id}>
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className={`text-xs font-medium ${msg.user === "You" ? "text-amber-400" : msg.user === "System" ? "text-cyan-400" : "text-gray-300"}`}>
+                    <span
+                      className={`text-xs font-medium ${
+                        msg.user === "You"
+                          ? "text-amber-400"
+                          : msg.user === "System"
+                            ? "text-cyan-400"
+                            : "text-gray-300"
+                      }`}
+                    >
                       {msg.user}
                     </span>
                     <span className="text-[10px] text-gray-600">{msg.time}</span>
@@ -999,148 +285,29 @@ export function LiveClassroomWindow() {
                   <p className="text-xs text-gray-400 leading-relaxed">{msg.text}</p>
                 </div>
               ))}
-
-              <div className="pt-3 mt-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                <div className="text-[10px] uppercase tracking-wider text-amber-400 font-mono mb-2">AI Tutor</div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      "Explain this like I'm 12",
-                      "Give me step-by-step",
-                      "Give 3 examples",
-                      "Common mistakes",
-                    ].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setAiPrompt((p) => (p ? `${p}\n\n${s}` : s))}
-                        className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={downloadTutorPdf}
-                    disabled={!tutorMsgs.length}
-                    className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 disabled:opacity-60"
-                    title="Download chat as PDF"
-                  >
-                    <span className="inline-flex items-center gap-1">
-                      <Download className="h-3.5 w-3.5" />
-                      PDF
-                    </span>
-                  </button>
-                </div>
-
-                <div className="rounded-md p-2 mb-2" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                  <div className="max-h-44 overflow-auto space-y-2 pr-1">
-                    {tutorMsgs.length === 0 ? (
-                      <div className="text-[11px] text-gray-500">Ask a question to start a tutor chat.</div>
-                    ) : (
-                      tutorMsgs.map((m) => (
-                        <div
-                          key={m.id}
-                          className={`text-[11px] leading-relaxed whitespace-pre-wrap ${m.role === "user" ? "text-amber-200" : "text-gray-300"}`}
-                        >
-                          <span className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mr-2">
-                            {m.role === "user" ? "YOU" : "TUTOR"}
-                          </span>
-                          {m.text}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    placeholder="Ask the tutor..."
-                    className="flex-1 px-3 py-2 text-xs rounded-md outline-none"
-                    style={{ background: "rgba(255,255,255,0.05)", color: "#e8d5c0", border: "1px solid rgba(255,255,255,0.08)" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={askTutor}
-                    disabled={aiBusy}
-                    className="px-3 py-2 rounded-md text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 disabled:opacity-60"
-                  >
-                    {aiBusy ? "..." : "Ask"}
-                  </button>
-                </div>
-                {tutorError ? (
-                  <div className="mt-2 text-[10px] text-red-400 font-mono">{tutorError}</div>
-                ) : null}
-
-                {tutorMsgs.length ? (
-                  <div className="mt-2 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const last = [...tutorMsgs].reverse().find((m) => m.role === "assistant");
-                        if (last?.text) void speak(last.text);
-                      }}
-                      disabled={voiceBusy}
-                      className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10 disabled:opacity-60"
-                    >
-                      <span className="inline-flex items-center gap-1">
-                        <Volume2 className="h-3.5 w-3.5" />
-                        {voiceBusy ? "..." : "Speak"}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setTutorMsgs([])}
-                      className="px-2 py-1 rounded text-[10px] bg-white/5 text-gray-300 border border-white/10 hover:bg-white/10"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                ) : null}
-
-                <div className="mt-3 text-[10px] uppercase tracking-wider text-cyan-400 font-mono mb-2">Voice</div>
-                <div className="flex items-center gap-2">
-                  {recorderRef.current ? (
-                    <button
-                      type="button"
-                      onClick={stopRecording}
-                      className="px-3 py-1.5 rounded text-[10px] bg-red-500/20 text-red-300 border border-red-500/30 hover:bg-red-500/30"
-                    >
-                      Stop
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={startRecording}
-                      disabled={voiceBusy}
-                      className="px-3 py-1.5 rounded text-[10px] bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 disabled:opacity-60"
-                    >
-                      Record
-                    </button>
-                  )}
-                  <span className="text-[10px] text-gray-500">{voiceBusy ? "processing..." : localStreamReady ? "ready" : ""}</span>
-                </div>
-                {transcript && (
-                  <div className="mt-2 text-xs text-gray-400">{transcript}</div>
-                )}
-              </div>
             </div>
             <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-              <form onSubmit={(e) => { e.preventDefault(); sendMessage(); }} className="flex gap-2">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendMessage();
+                }}
+                className="flex gap-2"
+              >
                 <input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Type a message..."
                   className="flex-1 px-3 py-2 text-xs rounded-md outline-none"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "#e8d5c0", border: "1px solid rgba(255,255,255,0.08)" }}
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    color: "#e8d5c0",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                  }}
                 />
                 <button
                   type="submit"
-                  className="px-3 py-2 rounded-md text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30"
+                  className="px-3 py-2 rounded-md text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
                 >
                   Send
                 </button>
@@ -1150,35 +317,5 @@ export function LiveClassroomWindow() {
         )}
       </div>
     </Window>
-  );
-}
-
-function VideoTile({
-  stream,
-  label,
-  muted,
-  large,
-}: {
-  stream: MediaStream;
-  label: string;
-  muted?: boolean;
-  large?: boolean;
-}) {
-  const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    ref.current.srcObject = stream;
-  }, [stream]);
-  return (
-    <div className="relative rounded-md overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)", background: "rgba(0,0,0,0.3)" }}>
-      <video
-        ref={ref}
-        autoPlay
-        playsInline
-        muted={!!muted}
-        className={large ? "w-full h-40 object-cover" : "w-full h-20 object-cover"}
-      />
-      <div className="absolute bottom-1 left-1 text-[9px] font-mono text-gray-200 bg-black/40 px-1.5 py-0.5 rounded">{label}</div>
-    </div>
   );
 }

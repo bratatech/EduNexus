@@ -2,14 +2,18 @@ import { useState, useEffect } from "react";
 import { Window } from "../Window";
 import { useTheme } from "@/lib/theme-provider";
 import { Check, Palette, Image, Info, Download, Search, X, ExternalLink } from "lucide-react";
-import { api } from "@/lib/api";
 
-interface Wallpaper {
-  id: string;
-  name: string;
-  url: string;
-  preview: string;
-}
+const WALLPAPERS = [
+  { id: "default", name: "Default", url: "", preview: "" },
+  { id: "galaxy", name: "Galaxy", url: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1920&q=80", preview: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=300&q=60" },
+  { id: "mountains", name: "Mountains", url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=80", preview: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&q=60" },
+  { id: "ocean", name: "Ocean", url: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=1920&q=80", preview: "https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=300&q=60" },
+  { id: "forest", name: "Dark Forest", url: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=80", preview: "https://images.unsplash.com/photo-1448375240586-882707db888b?w=300&q=60" },
+  { id: "aurora", name: "Aurora", url: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?w=1920&q=80", preview: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?w=300&q=60" },
+  { id: "city", name: "Night City", url: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=1920&q=80", preview: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=300&q=60" },
+  { id: "abstract", name: "Abstract", url: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=1920&q=80", preview: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?w=300&q=60" },
+  { id: "space", name: "Deep Space", url: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80", preview: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&q=60" },
+];
 
 type SettingsTab = "appearance" | "wallpaper" | "about";
 
@@ -22,10 +26,20 @@ export function SettingsWindow() {
     try { return localStorage.getItem("edunexuz-wallpaper") || ""; } catch { return ""; }
   });
   const [customUrl, setCustomUrl] = useState("");
-  const [wallpapers, setWallpapers] = useState<Wallpaper[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ url: string; preview: string; name: string }>>([]);
   const [searching, setSearching] = useState(false);
+
+  const [systemInfo, setSystemInfo] = useState({ resolution: "1920×1080", browser: "Unknown" });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSystemInfo({
+        resolution: `${window.innerWidth}×${window.innerHeight}`,
+        browser: typeof navigator !== "undefined" ? navigator.userAgent.split(" ").pop() || "Unknown" : "Unknown",
+      });
+    }
+  }, []);
 
   const applyWallpaper = (url: string) => {
     setWallpaper(url);
@@ -51,23 +65,6 @@ export function SettingsWindow() {
     { id: "wallpaper", label: "Wallpaper", icon: <Image className="h-3.5 w-3.5" /> },
     { id: "about", label: "About", icon: <Info className="h-3.5 w-3.5" /> },
   ];
-
-  useEffect(() => {
-    let mounted = true;
-    api
-      .getContent("wallpapers")
-      .then((r) => {
-        if (!mounted) return;
-        setWallpapers((r?.data || []) as Wallpaper[]);
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setWallpapers([]);
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   return (
     <Window id="settings">
@@ -167,7 +164,7 @@ export function SettingsWindow() {
               <div className="mb-6">
                 <h3 className="text-sm text-foreground mb-3 font-medium">Presets</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {wallpapers.map((wp) => (
+                  {WALLPAPERS.map((wp) => (
                     <button
                       key={wp.id}
                       onClick={() => applyWallpaper(wp.url)}
@@ -265,8 +262,8 @@ export function SettingsWindow() {
                     <div><span className="text-muted-foreground">DE:</span> EduNexuZ Desktop Environment</div>
                     <div><span className="text-muted-foreground">WM:</span> WindowManager.tsx</div>
                     <div><span className="text-muted-foreground">Theme:</span> {current?.name ?? theme}</div>
-                    <div><span className="text-muted-foreground">Resolution:</span> {window.innerWidth}×{window.innerHeight}</div>
-                    <div><span className="text-muted-foreground">Browser:</span> {navigator.userAgent.split(" ").pop()}</div>
+                    <div><span className="text-muted-foreground">Resolution:</span> {systemInfo.resolution}</div>
+                    <div><span className="text-muted-foreground">Browser:</span> {systemInfo.browser}</div>
                   </div>
                 </div>
                 <div className="p-4 rounded-lg border border-border bg-surface-2/30">

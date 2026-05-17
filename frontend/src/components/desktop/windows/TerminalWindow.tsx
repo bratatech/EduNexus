@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Window } from "../Window";
-import { api } from "@/lib/api";
 
 interface Line { kind: "in" | "out" | "system"; text: string; }
 
@@ -12,7 +11,7 @@ const WELCOME = [
   "",
 ];
 
-const DEFAULT_FILESYSTEM: Record<string, string | Record<string, string>> = {
+const FILESYSTEM: Record<string, string | Record<string, string>> = {
   "readme.txt": "EduNexuZ — Warm tutoring for the connected generation.\nMath · Sciences · Languages · CS · Test prep.\nFree diagnostic call. Vetted tutors. Matched in 24h.",
   "profile.txt": "Operator: guest\nRole: Student\nJoined: Today\nCourses: 0",
   "programs/": "algebra-foundations/  calculus-bootcamp/  physics-mechanics/  python-from-zero/  web3-fundamentals/",
@@ -58,7 +57,7 @@ const COMMANDS: Record<string, string> = {
   exit              close terminal`,
 };
 
-const DEFAULT_FORTUNES = [
+const FORTUNES = [
   "The best time to plant a tree was 20 years ago. The second best time is now.",
   "A wise person once said nothing at all.",
   "The only way to do great work is to love what you do. — Steve Jobs",
@@ -69,32 +68,29 @@ const DEFAULT_FORTUNES = [
   "To understand recursion, you must first understand recursion.",
 ];
 
-// Deferred to a function so `window` / `performance` are not accessed during SSR
-// (module-level access to `window` causes "window is not defined" on the server).
 function getNeofetch(): string {
   const w = typeof window !== "undefined" ? window.innerWidth : 1920;
   const h = typeof window !== "undefined" ? window.innerHeight : 1080;
-  const perf = typeof performance !== "undefined" ? (performance as any) : null;
-  const usedMB = Math.round(perf?.memory?.usedJSHeapSize / 1024 / 1024 || 64);
-  const totalMB = Math.round(perf?.memory?.jsHeapSizeLimit / 1024 / 1024 || 512);
-  return [
-    "       _nnnn_            operator@edunexuz",
-    "      dGGGGMMb           ──────────────────",
-    "     @p~qp~~qMb          OS: EduNexuZ ctOS v3.14",
-    "     M|@||@) M|          Host: Browser Virtual Machine",
-    "     @,----.JM|          Kernel: JavaScript ES2024",
-    "    JS^\\__/  qKL         Uptime: since page load",
-    "   dZP        qKRb       Packages: npm (managed)",
-    "  dZP          qKKb      Shell: bash 5.2",
-    ` fZP            SMMb     Resolution: ${w}x${h}`,
-    "  HZM            MMMM    DE: EduNexuZ Desktop",
-    "  FqM            MMMM    WM: WindowManager.tsx",
-    ' __| ".        |\\dS"qML  Theme: Watch Dogs 2',
-    "  |    `.       | `' \\Zq  Terminal: EduNexuZ Term",
-    "  _)      \\.___.,|     .' CPU: V8 JavaScript Engine",
-    ` \\____   )MMMMMP|   .'   Memory: ${usedMB}MB / ${totalMB}MB`,
-    "      `-'       `--'",
-  ].join("\n");
+  const mem = typeof performance !== "undefined" ? (performance as any)?.memory : null;
+  const usedMB = Math.round((mem?.usedJSHeapSize || 0) / 1024 / 1024 || 64);
+  const totalMB = Math.round((mem?.jsHeapSizeLimit || 0) / 1024 / 1024 || 512);
+  return `
+       \x1b[33m_nnnn_\x1b[0m          operator@edunexuz
+      \x1b[33mdGGGGMMb\x1b[0m         ──────────────────
+     \x1b[33m@p~qp~~qMb\x1b[0m        OS: EduNexuZ ctOS v3.14
+     \x1b[33mM|@||@) M|\x1b[0m        Host: Browser Virtual Machine
+     \x1b[33m@,----.JM|\x1b[0m        Kernel: JavaScript ES2024
+    \x1b[33mJS^\\__/  qKL\x1b[0m       Uptime: since page load
+   \x1b[33mdZP        qKRb\x1b[0m     Packages: npm (managed)
+  \x1b[33mdZP          qKKb\x1b[0m    Shell: bash 5.2
+ \x1b[33mfZP            SMMb\x1b[0m   Resolution: ${w}x${h}
+ \x1b[33mHZM            MMMM\x1b[0m   DE: EduNexuZ Desktop
+ \x1b[33mFqM            MMMM\x1b[0m   WM: WindowManager.tsx
+\x1b[33m__| ".        |\\dS"qML\x1b[0m  Theme: Watch Dogs 2
+\x1b[33m|    \`.       | \`' \\Zq\x1b[0m  Terminal: EduNexuZ Term
+\x1b[33m_)      \\.___.,|     .'\x1b[0m  CPU: V8 JavaScript Engine
+\x1b[33m\\____   )MMMMMP|   .'\x1b[0m   Memory: ${usedMB}MB / ${totalMB}MB
+\x1b[33m     \`-'       \`--'\x1b[0m`;
 }
 
 export function TerminalWindow() {
@@ -105,26 +101,8 @@ export function TerminalWindow() {
   const [history, setHistory] = useState<string[]>([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [cwd, setCwd] = useState("~");
-  const [filesystem, setFilesystem] = useState<Record<string, string | Record<string, string>>>(DEFAULT_FILESYSTEM);
-  const [fortunes, setFortunes] = useState<string[]>(DEFAULT_FORTUNES);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    Promise.all([api.getContent("terminal_filesystem"), api.getContent("terminal_fortunes")])
-      .then(([fsRes, fRes]) => {
-        if (!mounted) return;
-        if (fsRes?.data) setFilesystem(fsRes.data as Record<string, string | Record<string, string>>);
-        if (Array.isArray(fRes?.data)) setFortunes(fRes.data as string[]);
-      })
-      .catch(() => {
-        if (!mounted) return;
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -133,6 +111,10 @@ export function TerminalWindow() {
   const addLines = useCallback((newLines: Line[]) => {
     setLines((ls) => [...ls, ...newLines]);
   }, []);
+
+  function stripAnsi(text: string): string {
+    return text.replace(/\x1b\[[0-9;]*m/g, "");
+  }
 
   function run(cmd: string) {
     const trimmed = cmd.trim();
@@ -154,7 +136,7 @@ export function TerminalWindow() {
       case "ls": {
         const dir = args[0] || "";
         const showAll = dir === "-a" || dir === "-la" || dir === "-al";
-        let items = Object.keys(filesystem);
+        let items = Object.keys(FILESYSTEM);
         if (showAll) items = [".bashrc", ".hidden_secret", ...items];
         out.push({ kind: "out", text: items.join("  ") });
         break;
@@ -162,7 +144,7 @@ export function TerminalWindow() {
       case "cat": {
         const file = args[0];
         if (!file) { out.push({ kind: "out", text: "cat: missing file operand" }); break; }
-        const content = filesystem[file];
+        const content = FILESYSTEM[file];
         if (typeof content === "string") {
           content.split("\n").forEach((l) => out.push({ kind: "out", text: l }));
         } else { out.push({ kind: "out", text: `cat: ${file}: No such file or directory` }); }
@@ -170,7 +152,7 @@ export function TerminalWindow() {
       }
       case "cd":
         if (!args[0] || args[0] === "~") setCwd("~");
-        else if (filesystem[args[0] + "/"]) setCwd(`~/${args[0]}`);
+        else if (FILESYSTEM[args[0] + "/"]) setCwd(`~/${args[0]}`);
         else out.push({ kind: "out", text: `cd: ${args[0]}: No such file or directory` });
         break;
       case "pwd":
@@ -196,7 +178,7 @@ export function TerminalWindow() {
         setLines([]);
         return;
       case "neofetch":
-        getNeofetch().split("\n").forEach((l) => out.push({ kind: "out", text: l }));
+        stripAnsi(getNeofetch()).split("\n").forEach((l) => out.push({ kind: "out", text: l }));
         break;
       case "history":
         history.forEach((h, i) => out.push({ kind: "out", text: `  ${i + 1}  ${h}` }));
@@ -215,7 +197,7 @@ export function TerminalWindow() {
         break;
       case "grep":
         out.push({ kind: "out", text: `Searching for "${argStr}"...` });
-        Object.entries(filesystem).forEach(([k, v]) => {
+        Object.entries(FILESYSTEM).forEach(([k, v]) => {
           if (typeof v === "string" && v.toLowerCase().includes(argStr.toLowerCase())) {
             out.push({ kind: "out", text: `${k}: ${v.split("\n").find((l) => l.toLowerCase().includes(argStr.toLowerCase())) || ""}` });
           }
@@ -229,19 +211,16 @@ export function TerminalWindow() {
         out.push({ kind: "out", text: "  200 pts/0    00:00:00 bash" });
         out.push({ kind: "out", text: "  201 pts/0    00:00:00 ps" });
         break;
-      case "top": {
-        const perfObj = typeof performance !== "undefined" ? (performance as any) : null;
-        const memUsed = Math.round(perfObj?.memory?.usedJSHeapSize / 1024 / 1024 || 64);
+      case "top":
         out.push({ kind: "out", text: "top - " + new Date().toLocaleTimeString() + " up 0 min, 1 user" });
         out.push({ kind: "out", text: "Tasks:   6 total,   1 running,   5 sleeping" });
-        out.push({ kind: "out", text: `Mem:    ${memUsed}MB used` });
+        out.push({ kind: "out", text: `Mem:    ${Math.round((performance as any)?.memory?.usedJSHeapSize / 1024 / 1024 || 64)}MB used` });
         out.push({ kind: "out", text: "" });
         out.push({ kind: "out", text: "  PID  %CPU  %MEM    COMMAND" });
         out.push({ kind: "out", text: "  142  2.1   1.4    edunexuz-shell" });
         out.push({ kind: "out", text: "  143  1.8   1.2    window-manager" });
         out.push({ kind: "out", text: "  200  0.5   0.3    bash" });
         break;
-      }
       case "ping":
         if (!args[0]) { out.push({ kind: "out", text: "ping: usage error" }); break; }
         out.push({ kind: "out", text: `PING ${args[0]} (127.0.0.1) 56(84) bytes of data.` });
@@ -298,7 +277,7 @@ export function TerminalWindow() {
         break;
       }
       case "fortune":
-        out.push({ kind: "out", text: fortunes[Math.floor(Math.random() * fortunes.length)] });
+        out.push({ kind: "out", text: FORTUNES[Math.floor(Math.random() * FORTUNES.length)] });
         break;
       case "matrix":
         out.push({ kind: "system", text: "Initiating matrix rain... (press any key to stop)" });
