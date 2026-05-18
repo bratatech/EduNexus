@@ -1,5 +1,6 @@
 [
   {
+<<<<<<< HEAD
     "id": "080e7253-3353-4994-88fd-70e8efa21a74",
     "wallet": "debnil@gmail.com",
     "filename": "lecture_1779106586326.notes",
@@ -419,6 +420,16 @@
     "classroom_id": null,
     "created_at": "2026-05-11T15:50:49.913Z",
     "summary": "```json\n{\n  \"title\": \"KMP Algorithm Document (Unreadable Content)\",\n  \"summary\": \"I am unable to provide a summary for the document 'KMPAlgorithm.pdf' because the submitted text appears to be raw, unparsed PDF stream data. This means the content is heavily garbled and incomprehensible, consisting of control characters, encoding artifacts, and binary data rather than human-readable words or sentences. Consequently, it's impossible to identify any definitions, key concepts, algorithmic steps, or important notes related to the KMP (Knuth-Morris-Pratt) algorithm. Without legible content, I cannot extract specific details such as key formulas, step-by-step procedures, or common pitfalls associated with the algorithm. To receive a proper summary, please ensure the document text is correctly extracted and submitted in a readable format, such as plain text or a clean transcription. This will allow for an accurate and student-friendly overview.\",\n  \"highlightedNotes\": [\n    {\n      \"note\": \"The provided document text is unreadable, consisting of garbled PDF stream data and control characters.\",\n      \"importance\": \"high\"\n    },\n    {\n      \"note\": \"No discernible content related to the KMP algorithm (definitions, steps, or formulas) could be extracted.\",\n      \"importance\": \"high\"\n    },\n    {\n      \"note\": \"The unreadable format prevents the identification of key concepts or potential pitfalls of the KMP algorithm.\",\n      \"importance\": \"medium\"\n    },\n    {\n      \"note\": \"To obtain a summary, the document needs to be resubmitted with properly extracted, human-readable text.\",\n      \"importance\": \"high\"\n    },\n    {\n      \"note\": \"The current input contains binary data and encoding artifacts, not natural language.\",\n      \"importance\": \"low\"\n    },\n    {\n      \"note\": \"Specific algorithmic steps or pseudocode for the KMP algorithm could not be identified from the given text.\",\n      \"importance\": \"medium\"\n    }\n  ]\n}\n```",
+=======
+    "id": "f1b7b42b-c9b3-44da-ab01-c35f75c62258",
+    "wallet": "soumya",
+    "filename": "Module_9_Amortized_Analysis.ppt.pdf",
+    "mimetype": "application/pdf",
+    "title": "Module_9_Amortized_Analysis.ppt.pdf",
+    "classroom_id": null,
+    "created_at": "2026-05-09T17:00:52.939Z",
+    "summary": "```json\n{\n  \"title\": \"Module 9: Amortized Analysis\",\n  \"summary\": \"The document titled 'Module 9: Amortized Analysis.ppt.pdf' was submitted for summarization. Unfortunately, the automated text extraction process encountered significant difficulties, rendering the content unreadable. The document largely consists of corrupted data, including non-decipherable characters and repetitive patterns, rather than coherent academic text. As a result, it is impossible to accurately identify or synthesize information regarding the principles of amortized analysis, key definitions, important formulas, or common pitfalls typically covered in such a module. Therefore, a comprehensive summary and detailed highlighted notes cannot be provided due to the complete inability to access any meaningful textual content within this PDF.\",\n  \"highlightedNotes\": [\n    {\n      \"note\": \"The document content is unreadable due to severe text extraction issues, preventing the identification of any key definitions, formulas, steps, or pitfalls related to Amortized Analysis.\",\n      \"importance\": \"high\"\n    }\n  ]\n}\n```",
+>>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
     "highlighted_notes": []
   },
   {

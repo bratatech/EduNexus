@@ -19,6 +19,7 @@
   },
   {
     "id": 3,
+<<<<<<< HEAD
     "wallet": "debnil",
     "name": "debnil",
     "email": "debnil1@gmail.com",
@@ -70,5 +71,22 @@
     "password_hash": "$2a$10$gx23yLplqQ39qjuiduKC5OvFXiWXcgftBewXcw3tY6xVZQhKpggzK",
     "xp": 0,
     "created_at": "2026-05-18T11:35:46.401Z"
+=======
+    "wallet": "antibrata",
+    "name": "antibrata",
+    "email": "brata@gmail.com",
+    "password_hash": "$2a$10$jkJJSh2nV1BwrQSd4DKt0OakuCJRKm6NJDhV5OV2ZxuFiEswitUL6",
+    "xp": 0,
+    "created_at": "2026-05-18T12:24:14.841Z"
+  },
+  {
+    "id": 4,
+    "wallet": "student1",
+    "name": "student1",
+    "email": "student1@example.com",
+    "password_hash": "$2a$10$ph6ty.tOv3mu38W5R1ONPumdxcKcF6d/0nzrTnnltypavrxMXUFyW",
+    "xp": 0,
+    "created_at": "2026-05-18T12:36:37.789Z"
+>>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
   }
 ]
