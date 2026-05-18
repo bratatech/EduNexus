@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "topics": [
+    {
+      "id": "internet-networking",
+      "title": "Internet & Networking",
+      "description": "How the internet works, protocols, DNS, and packet routing.",
+      "icon": "🌐",
+      "order": 1,
+      "videos": [
+        {
+          "id": "net-01",
+          "title": "How does the Internet work?",
+          "description": "Introduction to networks, packets, and the global internet.",
+          "youtube_url": "https://www.youtube.com/watch?v=VXo0p_1z3Uw",
+          "duration_min": 13,
+          "order": 1
+        },
+        {
+          "id": "net-02",
+          "title": "Computer Networking Full Course",
+          "description": "OSI model, TCP/IP, routing, and network devices.",
+          "youtube_url": "https://www.youtube.com/watch?v=qiQR5rTSshw",
+          "duration_min": 45,
+          "order": 2
+        },
+        {
+          "id": "net-03",
+          "title": "DNS Explained",
+          "description": "Domain Name System — how human-readable URLs map to IP addresses.",
+          "youtube_url": "https://www.youtube.com/watch?v=uOfonONtsIY",
+          "duration_min": 6,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "programming-fundamentals",
+      "title": "Programming Fundamentals",
+      "description": "Core CS concepts: algorithms, data structures, and problem solving.",
+      "icon": "💻",
+      "order": 2,
+      "videos": [
+        {
+          "id": "prog-01",
+          "title": "Introduction to Algorithms",
+          "description": "What algorithms are and why efficiency matters.",
+          "youtube_url": "https://www.youtube.com/watch?v=8hly31xHHsl",
+          "duration_min": 11,
+          "order": 1
+        },
+        {
+          "id": "prog-02",
+          "title": "Data Structures Easy to Advanced",
+          "description": "Arrays, linked lists, trees, graphs, and hash tables.",
+          "youtube_url": "https://www.youtube.com/watch?v=RBSGKlAvoiM",
+          "duration_min": 120,
+          "order": 2
+        },
+        {
+          "id": "prog-03",
+          "title": "Big O Notation",
+          "description": "Time and space complexity analysis for algorithms.",
+          "youtube_url": "https://www.youtube.com/watch?v=Mo4ves4X17I",
+          "duration_min": 6,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "mathematics",
+      "title": "Mathematics for CS",
+      "description": "Discrete math, logic, and calculus foundations for computing.",
+      "icon": "📐",
+      "order": 3,
+      "videos": [
+        {
+          "id": "math-01",
+          "title": "Discrete Mathematics Introduction",
+          "description": "Sets, logic, proofs, and combinatorics basics.",
+          "youtube_url": "https://www.youtube.com/watch?v=DBug0O8GYVw",
+          "duration_min": 15,
+          "order": 1
+        },
+        {
+          "id": "math-02",
+          "title": "Linear Algebra Essence",
+          "description": "Vectors, matrices, and transformations — visual intuition.",
+          "youtube_url": "https://www.youtube.com/watch?v=fNk_zzaMoSs",
+          "duration_min": 10,
+          "order": 2
+        },
+        {
+          "id": "math-03",
+          "title": "Calculus 1 — Limits",
+          "description": "Limits, continuity, and the foundation of derivatives.",
+          "youtube_url": "https://www.youtube.com/watch?v=HfACrYCxPZg",
+          "duration_min": 22,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "physics-science",
+      "title": "Physics & Science",
+      "description": "Mechanics, electricity, and scientific method for STEM learners.",
+      "icon": "🔬",
+      "order": 4,
+      "videos": [
+        {
+          "id": "sci-01",
+          "title": "Introduction to Physics",
+          "description": "Units, measurement, motion, and Newton's laws overview.",
+          "youtube_url": "https://www.youtube.com/watch?v=CQYELiItV84",
+          "duration_min": 9,
+          "order": 1
+        },
+        {
+          "id": "sci-02",
+          "title": "Electricity and Circuits",
+          "description": "Voltage, current, resistance, and Ohm's law.",
+          "youtube_url": "https://www.youtube.com/watch?v=mc979Ohitso",
+          "duration_min": 14,
+          "order": 2
+        },
+        {
+          "id": "sci-03",
+          "title": "Chemistry: The Periodic Table",
+          "description": "Elements, groups, periods, and atomic structure.",
+          "youtube_url": "https://www.youtube.com/watch?v=0RRVV4Diomg",
+          "duration_min": 12,
+          "order": 3
+        }
+      ]
+    }
+  ]
+}

@@ -116,7 +116,8 @@ export function aiRouter({ db }) {
     return s === 429 || s === 503;
   }
 
-  async function generateWithGeminiRetry({ model, prompt, retries = 2 }) {
+  async function generateWithGeminiRetry({ model, prompt, parts, retries = 2 }) {
+    const content = parts || prompt;
     let attempt = 0;
     // total attempts = retries + 1
     // backoff: 500ms, 1200ms, 2500ms
@@ -125,7 +126,7 @@ export function aiRouter({ db }) {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       try {
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(content);
         return result?.response?.text?.() || "";
       } catch (e) {
         if (attempt >= retries || !isRetriableGeminiError(e)) throw e;
@@ -136,8 +137,213 @@ export function aiRouter({ db }) {
     }
   }
 
+  function normalizeYoutubeWatchUrl(videoUrl) {
+    let cleanUrl = String(videoUrl || "").trim();
+    cleanUrl = cleanUrl.replace(/^https?:\/\/youtu\.be\/([^?]+)(\?.*)?$/, "https://www.youtube.com/watch?v=$1");
+    cleanUrl = cleanUrl.replace(/^https?:\/\/www\.youtube\.com\/embed\/([^?]+)(\?.*)?$/, "https://www.youtube.com/watch?v=$1");
+    try {
+      const u = new URL(cleanUrl);
+      const v = u.searchParams.get("v");
+      if (v) return `https://www.youtube.com/watch?v=${v}`;
+    } catch { /* leave as-is */ }
+    return cleanUrl;
+  }
+
+  function buildLectureNotesPrompt({ cleanUrl, reqTitle, topicTitle, topicDescription, videoDescription }) {
+    const ctx = [
+      topicTitle ? `Course topic: ${topicTitle}` : "",
+      topicDescription ? `Topic overview: ${topicDescription}` : "",
+      videoDescription ? `Lecture focus: ${videoDescription}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    return (
+      `You are an expert academic note-taker and university teaching assistant.\n` +
+      `Watch and analyse the attached YouTube lecture video.\n` +
+      `Video URL: ${cleanUrl}\n` +
+      (ctx ? `${ctx}\n` : "") +
+      `\nGenerate VERY detailed, structured, and elaborate class notes from the actual lecture content.\n` +
+      `Base every section on what is taught in the video — do not invent unrelated material.\n\n` +
+      `Return ONLY valid JSON (no markdown, no code fences) with this schema:\n` +
+      `{\n` +
+      `  "title": string,\n` +
+      `  "summary": string,\n` +
+      `  "highlightedNotes": [\n` +
+      `    { "note": string, "importance": "high"|"medium"|"low" }\n` +
+      `  ]\n` +
+      `}\n\n` +
+      `Requirements for "summary":\n` +
+      `- Write professional-grade study notes (NOT a paragraph dump).\n` +
+      `- Use simple section headings like "Overview", "Key Concepts", "How It Works", "Examples", "Common Misconceptions", "Quick Self-Check", "Glossary".\n` +
+      `- For each key concept: definition (1-2 lines) + intuition + why it matters + mini example + common confusion.\n` +
+      `- Identify and explain AT LEAST 10-15 key concepts from the lecture (use the lecturer's terminology).\n` +
+      `- Include a "Timeline / Lecture flow" section with 5-8 bullets mapping the order topics were presented.\n` +
+      `- Target 1400-2200 words.\n` +
+      `- Use bullet points ("- ") for lists.\n` +
+      `- IMPORTANT: "summary" must be human-readable plain text for students — NOT JSON, NOT { braces }, NOT "key": value syntax.\n` +
+      `- Write in a formal, clear academic tone suitable for exam revision.\n` +
+      `- Do NOT use markdown symbols like #, **, __, or code fences.\n` +
+      `- If the lecture covers a technical topic, include complexity, diagrams description, or formulas as text.\n` +
+      `- End with 5 "Quick Self-Check" questions a student should answer after watching.\n` +
+      `- End with a "Glossary" of 10+ key terms with brief definitions.\n\n` +
+      `Requirements for "highlightedNotes" (REQUIRED — minimum 15 items):\n` +
+      `- Each item is one precise, formal sentence capturing a key takeaway.\n` +
+      `- Mark importance: high = core concept/formula/main result, medium = supporting point, low = tip/context.\n` +
+      `- Do NOT leave highlightedNotes empty.\n\n` +
+      `CRITICAL: Return raw JSON only. Do NOT wrap the response in markdown code fences.\n` +
+      `Lecture title hint: ${reqTitle || "(none provided)"}`
+    );
+  }
+
+  async function generateLectureNotesWithGemini({ model, cleanUrl, reqTitle, topicTitle, topicDescription, videoDescription }) {
+    const notePrompt = buildLectureNotesPrompt({
+      cleanUrl,
+      reqTitle,
+      topicTitle,
+      topicDescription,
+      videoDescription,
+    });
+    const lectureTimeoutMs = Number(process.env.AI_LECTURE_NOTES_TIMEOUT_MS || 240_000);
+    const videoParts = [
+      { fileData: { mimeType: "video/*", fileUri: cleanUrl } },
+      { text: notePrompt },
+    ];
+
+    try {
+      return await withTimeout(
+        generateWithGeminiRetry({ model, parts: videoParts, retries: 1 }),
+        lectureTimeoutMs
+      );
+    } catch (videoErr) {
+      const isTimeout = videoErr && typeof videoErr === "object" && "message" in videoErr && videoErr.message === "timeout";
+      console.warn(
+        "[ai/lecture-notes] Video analysis failed, falling back to text:",
+        isTimeout ? "timeout" : videoErr?.message || videoErr
+      );
+      const textPrompt =
+        notePrompt +
+        `\n\nIf you cannot watch the video, infer the topic from the URL/video id and still produce comprehensive notes.`;
+      return await withTimeout(
+        generateWithGeminiRetry({ model, prompt: textPrompt, retries: 2 }),
+        Math.min(lectureTimeoutMs, 90_000)
+      );
+    }
+  }
+
+  async function parseLectureNotesJson({ out, model, reqTitle, filename }) {
+    const cleaned = stripCodeFences(out);
+    let parsed2;
+    try {
+      parsed2 = JSON.parse(cleaned);
+    } catch {
+      const extracted = extractFirstJsonObject(cleaned);
+      if (extracted) {
+        try { parsed2 = JSON.parse(extracted); } catch { parsed2 = null; }
+      }
+      if (!parsed2) {
+        try {
+          const repaired = await summarizeRepairJson({ model, badText: out, filename: filename || "Lecture Notes" });
+          const repairedExtracted = extractFirstJsonObject(repaired) || repaired;
+          parsed2 = JSON.parse(repairedExtracted);
+        } catch {
+          parsed2 = {
+            title: reqTitle || "Lecture Notes",
+            summary: typeof out === "string" ? out : String(out || ""),
+            highlightedNotes: [],
+          };
+        }
+      }
+    }
+
+    const schema = z.object({
+      title: z.string().min(1).catch(reqTitle || "Lecture Notes"),
+      summary: z.string().min(1),
+      highlightedNotes: z
+        .array(z.object({ note: z.string().min(1), importance: z.enum(["high", "medium", "low"]).catch("medium") }))
+        .catch([]),
+    });
+    const safe = schema.safeParse(parsed2);
+    if (!safe.success) {
+      return finalizeLectureNotes(
+        {
+          title: reqTitle || "Lecture Notes",
+          summary: typeof out === "string" ? out : String(out || ""),
+          highlightedNotes: [],
+        },
+        reqTitle
+      );
+    }
+    return finalizeLectureNotes(safe.data, reqTitle);
+  }
+
+  function stripCodeFences(text) {
+    return String(text || "")
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```\s*$/i, "")
+      .trim();
+  }
+
+  function extractHighlightsFromSummary(summary) {
+    const lines = String(summary || "")
+      .split(/\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const bullets = lines.filter((l) => /^[-•*]\s+/.test(l) || /^\d+\.\s+/.test(l));
+    return bullets.slice(0, 22).map((line, i) => ({
+      note: line.replace(/^[-•*]\s+/, "").replace(/^\d+\.\s+/, "").trim(),
+      importance: i < 8 ? "high" : i < 15 ? "medium" : "low",
+    }));
+  }
+
+  /** Convert model output into human-readable plain text + highlight list. */
+  function finalizeLectureNotes(raw, reqTitle) {
+    let title = String(raw?.title || reqTitle || "Lecture Notes").trim();
+    let summary = String(raw?.summary || "").trim();
+    let highlightedNotes = Array.isArray(raw?.highlightedNotes)
+      ? raw.highlightedNotes
+      : Array.isArray(raw?.highlighted_notes)
+        ? raw.highlighted_notes
+        : [];
+
+    const unwrapSummaryJson = () => {
+      const blob = extractFirstJsonObject(summary) || stripCodeFences(summary);
+      if (!blob.startsWith("{")) return false;
+      try {
+        const inner = JSON.parse(blob);
+        if (typeof inner.summary === "string" && inner.summary.trim()) summary = inner.summary.trim();
+        if (typeof inner.title === "string" && inner.title.trim()) title = inner.title.trim();
+        const hl = inner.highlightedNotes || inner.highlighted_notes;
+        if (Array.isArray(hl) && hl.length) highlightedNotes = hl;
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (summary.startsWith("{") || summary.includes('"highlightedNotes"') || summary.includes('"summary"')) {
+      unwrapSummaryJson();
+    }
+
+    summary = stripCodeFences(summary).trim();
+
+    highlightedNotes = highlightedNotes
+      .map((n) => ({
+        note: String(n?.note || n?.text || "").trim(),
+        importance: ["high", "medium", "low"].includes(n?.importance) ? n.importance : "medium",
+      }))
+      .filter((n) => n.note.length > 0);
+
+    if (highlightedNotes.length < 8 && summary.length > 300) {
+      const derived = extractHighlightsFromSummary(summary);
+      if (derived.length > highlightedNotes.length) highlightedNotes = derived;
+    }
+
+    return { title, summary, highlightedNotes };
+  }
+
   function extractFirstJsonObject(text) {
-    const s = String(text || "");
+    const s = stripCodeFences(text);
     const first = s.indexOf("{");
     const last = s.lastIndexOf("}");
     if (first === -1 || last === -1 || last <= first) return "";
@@ -572,6 +778,176 @@ export function aiRouter({ db }) {
     await db.setContent("focus_logs", next);
 
     res.json({ ok: true });
+  }));
+
+  // GET /api/ai/lecture-notes/cached?videoId=&topicId= — return saved notes for this lecture
+  r.get("/lecture-notes/cached", requireAuth, asyncHandler(async (req, res) => {
+    const q = z
+      .object({
+        videoId: z.string().min(1).max(80),
+        topicId: z.string().min(1).max(80).optional(),
+      })
+      .safeParse(req.query || {});
+    if (!q.success) return res.status(400).json({ error: "invalid_query" });
+
+    const rows = await getDocSummariesStore();
+    const hit = rows.find(
+      (x) =>
+        x &&
+        typeof x === "object" &&
+        x.wallet === req.user.wallet &&
+        x.source_type === "lecture_video" &&
+        x.video_id === q.data.videoId &&
+        (!q.data.topicId || x.topic_id === q.data.topicId)
+    );
+    if (!hit) return res.json({ data: null });
+    const normalized = finalizeLectureNotes(
+      {
+        title: hit.title,
+        summary: hit.summary,
+        highlightedNotes: hit.highlighted_notes || hit.highlightedNotes,
+      },
+      hit.title
+    );
+    res.json({
+      data: {
+        ...hit,
+        title: normalized.title,
+        summary: normalized.summary,
+        highlighted_notes: normalized.highlightedNotes,
+      },
+    });
+  }));
+
+  // POST /api/ai/lecture-notes  { videoUrl, classroomId?, title?, topicId?, videoId?, ... }
+  // Generates detailed structured notes from a YouTube lecture video URL using Gemini.
+  r.post("/lecture-notes", requireAuth, asyncHandler(async (req, res) => {
+    const bodySchema = z.object({
+      videoUrl: z.string().url().min(1),
+      title: z.string().max(200).optional(),
+      classroomId: z.string().max(100).optional(),
+      topicId: z.string().max(80).optional(),
+      videoId: z.string().max(80).optional(),
+      topicTitle: z.string().max(200).optional(),
+      topicDescription: z.string().max(1000).optional(),
+      videoDescription: z.string().max(1000).optional(),
+    });
+    const parsed = bodySchema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: "invalid_body" });
+
+    const model = getGeminiModel();
+    if (!model) return res.status(501).json({ error: "gemini_not_configured" });
+
+    const { videoUrl, title: reqTitle, classroomId, topicId, videoId, topicTitle, topicDescription, videoDescription } =
+      parsed.data;
+    const cleanUrl = normalizeYoutubeWatchUrl(videoUrl);
+
+    // Return existing notes if already generated for this video
+    if (videoId) {
+      const rows = await getDocSummariesStore();
+      const existing = rows.find(
+        (x) =>
+          x &&
+          typeof x === "object" &&
+          x.wallet === req.user.wallet &&
+          x.source_type === "lecture_video" &&
+          x.video_id === videoId &&
+          (!topicId || x.topic_id === topicId)
+      );
+      if (existing?.summary) {
+        const normalized = finalizeLectureNotes(
+          {
+            title: existing.title,
+            summary: existing.summary,
+            highlightedNotes: existing.highlighted_notes || existing.highlightedNotes,
+          },
+          existing.title
+        );
+        return res.json({
+          ok: true,
+          cached: true,
+          data: {
+            ...existing,
+            title: normalized.title,
+            summary: normalized.summary,
+            highlighted_notes: normalized.highlightedNotes,
+          },
+        });
+      }
+    }
+
+    let out = "";
+    let activeModel = model;
+    try {
+      out = await generateLectureNotesWithGemini({
+        model: activeModel,
+        cleanUrl,
+        reqTitle,
+        topicTitle,
+        topicDescription,
+        videoDescription,
+      });
+    } catch (e) {
+      if (e && typeof e === "object" && "status" in e && e.status === 404) {
+        const fallbackModel = getGeminiClient()?.getGenerativeModel({ model: "gemini-2.5-flash" }) || null;
+        if (!fallbackModel) return res.status(502).json({ error: "gemini_model_not_supported" });
+        activeModel = fallbackModel;
+        try {
+          out = await generateLectureNotesWithGemini({
+            model: activeModel,
+            cleanUrl,
+            reqTitle,
+            topicTitle,
+            topicDescription,
+            videoDescription,
+          });
+        } catch (fb) {
+          console.error("[ai/lecture-notes] Gemini fallback failed:", fb?.message || fb);
+          if (fb && typeof fb === "object" && "message" in fb && fb.message === "timeout") {
+            return res.status(504).json({ error: "ai_timeout" });
+          }
+          if (isRetriableGeminiError(fb)) return res.status(503).json({ error: "gemini_busy" });
+          return res.status(502).json({ error: "gemini_unavailable", detail: String(fb?.message || "").slice(0, 200) });
+        }
+      } else {
+        if (e && typeof e === "object" && "message" in e && e.message === "timeout") {
+          return res.status(504).json({ error: "ai_timeout" });
+        }
+        if (isRetriableGeminiError(e)) return res.status(503).json({ error: "gemini_busy" });
+        console.error("[ai/lecture-notes] Gemini error:", e?.message || e);
+        return res.status(502).json({ error: "gemini_unavailable", detail: String(e?.message || "").slice(0, 200) });
+      }
+    }
+
+    const parsedNotes = await parseLectureNotesJson({
+      out,
+      model: activeModel,
+      reqTitle,
+      filename: reqTitle || "Lecture Notes",
+    });
+    const notes = finalizeLectureNotes(parsedNotes, reqTitle);
+
+    // Persist to the same document_summaries store for reuse
+    const rows = await getDocSummariesStore();
+    const row = {
+      id: randomUUID(),
+      wallet: req.user.wallet,
+      filename: `lecture_${Date.now()}.notes`,
+      mimetype: "text/plain",
+      title: notes.title,
+      classroom_id: classroomId || null,
+      topic_id: topicId || null,
+      video_id: videoId || null,
+      topic_title: topicTitle || null,
+      source_type: "lecture_video",
+      source_url: cleanUrl,
+      created_at: new Date().toISOString(),
+      summary: notes.summary,
+      highlighted_notes: notes.highlightedNotes,
+    };
+    await setDocSummariesStore([row, ...rows]);
+
+    return res.json({ ok: true, data: row });
   }));
 
   r.post("/quiz", requireAuth, asyncHandler(async (req, res) => {

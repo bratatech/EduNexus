@@ -1,4 +1,7 @@
-const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+// In dev, use same-origin + Vite proxy (/api → backend). In prod, set VITE_API_BASE_URL.
+const API_BASE_URL: string =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV ? "" : "http://localhost:8080");
 
 export type ApiErrorCode = string;
 
@@ -30,7 +33,19 @@ export function setToken(token: string) {
   try {
     if (token) localStorage.setItem("edunexuz-token", token);
     else localStorage.removeItem("edunexuz-token");
-  } catch {}
+  } catch { }
+}
+
+function parseApiJson(text: string, status: number): unknown {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    const isHtml = /^\s*</.test(text);
+    const err: ApiError = new Error(isHtml ? "api_unavailable" : "invalid_json") as ApiError;
+    err.data = { status, preview: text.slice(0, 160) };
+    throw err;
+  }
 }
 
 export async function apiFetch(
@@ -60,7 +75,7 @@ export async function apiFetch(
   });
 
   const text = await res.text();
-  const data: unknown = text ? JSON.parse(text) : null;
+  const data = parseApiJson(text, res.status);
   if (!res.ok) {
     const code = (data && typeof data === "object" && "error" in (data as any) ? (data as any).error : null) as
       | string
@@ -99,7 +114,7 @@ export async function apiFetchForm(
   });
 
   const text = await res.text();
-  const data: unknown = text ? JSON.parse(text) : null;
+  const data = parseApiJson(text, res.status);
   if (!res.ok) {
     const code = (data && typeof data === "object" && "error" in (data as any) ? (data as any).error : null) as
       | string
@@ -275,5 +290,78 @@ export const api = {
     if (title) form.append("title", title);
     if (classroomId) form.append("classroomId", classroomId);
     return (await apiFetchForm("/api/ai/documents/summarize", { form, auth: true })) as { ok: boolean; data: unknown };
+  },
+
+  aiLectureNotes: async ({
+    videoUrl,
+    title,
+    classroomId,
+    topicId,
+    videoId,
+    topicTitle,
+    topicDescription,
+    videoDescription,
+  }: {
+    videoUrl: string;
+    title?: string;
+    classroomId?: string;
+    topicId?: string;
+    videoId?: string;
+    topicTitle?: string;
+    topicDescription?: string;
+    videoDescription?: string;
+  }): Promise<{ ok: boolean; data: unknown; cached?: boolean }> => {
+    return (await apiFetch("/api/ai/lecture-notes", {
+      method: "POST",
+      body: {
+        videoUrl,
+        title,
+        classroomId,
+        topicId,
+        videoId,
+        topicTitle,
+        topicDescription,
+        videoDescription,
+      },
+      auth: true,
+    })) as { ok: boolean; data: unknown; cached?: boolean };
+  },
+
+  aiLectureNotesCached: async ({
+    videoId,
+    topicId,
+  }: {
+    videoId: string;
+    topicId?: string;
+  }): Promise<{ data: unknown | null }> => {
+    const q = new URLSearchParams({ videoId });
+    if (topicId) q.set("topicId", topicId);
+    return (await apiFetch(`/api/ai/lecture-notes/cached?${q}`, { auth: true })) as { data: unknown | null };
+  },
+
+  classroomTopics: async (): Promise<{ data: unknown[] }> => {
+    return (await apiFetch("/api/classroom/topics")) as { data: unknown[] };
+  },
+
+  classroomTopicPlaylist: async (topicId: string): Promise<{ data: unknown }> => {
+    return (await apiFetch(`/api/classroom/topics/${encodeURIComponent(topicId)}`)) as { data: unknown };
+  },
+
+  classroomAddVideo: async (
+    topicId: string,
+    body: {
+      id: string;
+      title: string;
+      youtube_url: string;
+      description?: string;
+      duration_min?: number;
+      order?: number;
+    }
+  ): Promise<{ ok: boolean; data: unknown }> => {
+    return (await apiFetch(`/api/classroom/admin/topics/${encodeURIComponent(topicId)}/videos`, {
+      method: "POST",
+      body,
+      auth: true,
+    })) as { ok: boolean; data: unknown };
   },
 };

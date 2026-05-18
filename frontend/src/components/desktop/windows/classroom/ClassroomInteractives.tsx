@@ -195,11 +195,19 @@ export function CameraAnimation() {
   return null;
 }
 
+interface SmartboardProps {
+  videoEmbedUrl?: string;
+  videoTitle?: string;
+  topicTitle?: string;
+}
+
 // Smartboard with YouTube embed
-export function Smartboard() {
-  const videoUrl = typeof import.meta !== "undefined"
-    ? import.meta.env?.VITE_YOUTUBE_VIDEO_URL || "https://www.youtube.com/embed/dQw4w9WgXcQ"
-    : "https://www.youtube.com/embed/dQw4w9WgXcQ";
+export function Smartboard({ videoEmbedUrl, videoTitle, topicTitle }: SmartboardProps) {
+  const fallback =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_YOUTUBE_VIDEO_URL) ||
+    "https://www.youtube.com/embed/VXo0p_1z3Uw?si=Uz3stlkTqDUXM0eg";
+  const videoUrl = videoEmbedUrl || fallback;
+  const boardLabel = topicTitle ? `${topicTitle}` : "● LIVE CLASS";
 
   return (
     <group position={[0, 5, -8.85]}>
@@ -227,10 +235,11 @@ export function Smartboard() {
         style={{ pointerEvents: "auto" }}
       >
         <iframe
+          key={videoUrl}
           width="960"
           height="450"
           src={videoUrl}
-          title="Classroom Video"
+          title={videoTitle || "Classroom Video"}
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
@@ -240,15 +249,15 @@ export function Smartboard() {
           }}
         />
       </Html>
-      {/* "LIVE CLASS" label */}
       <Text
         position={[-4.5, 2.85, 0.1]}
-        fontSize={0.18}
+        fontSize={0.14}
         color="#f0a35a"
         anchorX="left"
         anchorY="middle"
+        maxWidth={4.5}
       >
-        ● LIVE CLASS
+        {boardLabel.length > 42 ? `${boardLabel.slice(0, 40)}…` : boardLabel}
       </Text>
     </group>
   );
