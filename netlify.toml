@@ -1,8 +1,13 @@
+# Frontend (TanStack Start / Vite) — deploy from repo root
 [build]
   base = "frontend"
-  publish = "dist"
-  command = "npm ci && npm run build"
+  publish = "dist/client"
+  command = "npm ci && npm run build && node scripts/netlify-postbuild.mjs"
 
+[build.environment]
+  NODE_VERSION = "22"
+
+# SPA fallback for client-side routing
 [[redirects]]
   from = "/*"
   to = "/index.html"

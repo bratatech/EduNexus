@@ -1,7 +1,9 @@
+# Render Blueprint — backend API only
+# Docs: https://render.com/docs/blueprint-spec
 services:
   - type: web
     name: edunexuz-backend
-    env: node
+    runtime: node
     plan: free
     rootDir: backend
     buildCommand: npm install
@@ -9,4 +11,49 @@ services:
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
-        value: 20
+        value: "20"
+      - key: PORT
+        value: "8080"
+      # JSON file storage (no Postgres required on free tier)
+      - key: DB_MODE
+        value: json
+      - key: SEED_FROM_JSON
+        value: "1"
+      # Set in Render dashboard to your Netlify URL (comma-separated for multiple origins)
+      - key: CORS_ORIGIN
+        sync: false
+      # Required — generate or paste a long random string
+      - key: JWT_SECRET
+        generateValue: true
+      # --- AI (Gemini) — classroom notes, tutor, document summarizer ---
+      - key: GOOGLE_AI_API_KEY
+        sync: false
+      - key: GOOGLE_AI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_TUTOR_PROVIDER
+        value: gemini
+      - key: AI_LECTURE_NOTES_TIMEOUT_MS
+        value: "240000"
+      - key: AI_TUTOR_TIMEOUT_MS
+        value: "60000"
+      # --- AI voice (optional) ---
+      - key: AI_VOICE_PROVIDER
+        value: openai
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_STT_MODEL
+        value: whisper-1
+      - key: OPENAI_TTS_MODEL
+        value: gpt-4o-mini-tts
+      - key: OPENAI_TTS_VOICE
+        value: alloy
+      - key: AI_VOICE_TIMEOUT_MS
+        value: "30000"
+      # --- Optional Postgres (set DB_MODE=pg and add Render Postgres) ---
+      - key: DATABASE_URL
+        sync: false
+      # --- Optional WebRTC TURN/STUN JSON ---
+      - key: WEBRTC_ICE_SERVERS_JSON
+        sync: false
+      - key: SOCKET_PATH
+        value: /socket.io
