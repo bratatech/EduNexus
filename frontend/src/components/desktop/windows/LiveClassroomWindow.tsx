@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import { useState, useCallback, Suspense, useRef, useEffect } from "react";
+import { useState, useCallback, Suspense, useRef, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-=======
-import { useEffect, useMemo, useState, useRef, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Text, Environment } from "@react-three/drei";
->>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
 import { Window } from "../Window";
 import { useWindowManager } from "@/lib/window-manager";
 import {
@@ -30,7 +24,6 @@ import {
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ChatMsg { id: number; user: string; text: string; time: string; }
 
-<<<<<<< HEAD
 function renderSummaryText(summary: string) {
   return summary.split("\n").map((line, i) => {
     const trimmed = line.trim();
@@ -45,130 +38,6 @@ function renderSummaryText(summary: string) {
           {trimmed}
         </div>
       );
-=======
-function Walls() {
-  return (
-    <group>
-      {/* Back wall */}
-      <mesh position={[0, 4, -8]} receiveShadow>
-        <planeGeometry args={[20, 8]} />
-        <meshStandardMaterial color="#1e1a16" />
-      </mesh>
-      {/* Left wall */}
-      <mesh position={[-10, 4, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[16, 8]} />
-        <meshStandardMaterial color="#221e1a" />
-      </mesh>
-      {/* Right wall */}
-      <mesh position={[10, 4, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[16, 8]} />
-        <meshStandardMaterial color="#221e1a" />
-      </mesh>
-      {/* Ceiling */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 8, 0]}>
-        <planeGeometry args={[20, 16]} />
-        <meshStandardMaterial color="#181614" />
-      </mesh>
-    </group>
-  );
-}
-
-function Whiteboard() {
-  return (
-    <group position={[0, 4.5, -7.9]}>
-      {/* Board frame */}
-      <mesh>
-        <boxGeometry args={[10, 4.5, 0.1]} />
-        <meshStandardMaterial color="#3a3530" />
-      </mesh>
-      {/* Board surface */}
-      <mesh position={[0, 0, 0.06]}>
-        <planeGeometry args={[9.6, 4.1]} />
-        <meshStandardMaterial color="#1a2a1a" roughness={0.3} />
-      </mesh>
-      {/* Text on whiteboard */}
-      <Text
-        position={[-3.5, 1.2, 0.12]}
-        fontSize={0.35}
-        color="#e8d5c0"
-        anchorX="left"
-      >
-        EduNexuZ — Live Session
-      </Text>
-      <Text
-        position={[-3.5, 0.5, 0.12]}
-        fontSize={0.25}
-        color="#f0a35a"
-        anchorX="left"
-      >
-        Topic: Introduction to Web3
-      </Text>
-      <Text
-        position={[-3.5, -0.1, 0.12]}
-        fontSize={0.2}
-        color="#88a088"
-        anchorX="left"
-      >
-        {`• Blockchain fundamentals
-• Smart contracts overview  
-• DeFi protocols`}
-      </Text>
-    </group>
-  );
-}
-
-function Desk({ position, color = "#4a3a2a" }: { position: [number, number, number]; color?: string }) {
-  return (
-    <group position={position}>
-      {/* Desktop surface */}
-      <mesh position={[0, 0.75, 0]} castShadow>
-        <boxGeometry args={[1.4, 0.06, 0.8]} />
-        <meshStandardMaterial color={color} roughness={0.6} />
-      </mesh>
-      {/* Legs */}
-      {[[-0.6, 0, -0.3], [0.6, 0, -0.3], [-0.6, 0, 0.3], [0.6, 0, 0.3]].map((pos, i) => (
-        <mesh key={i} position={[pos[0], 0.375, pos[2]]} castShadow>
-          <boxGeometry args={[0.05, 0.75, 0.05]} />
-          <meshStandardMaterial color="#2a2520" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function Chair({ position }: { position: [number, number, number] }) {
-  return (
-    <group position={position}>
-      {/* Seat */}
-      <mesh position={[0, 0.45, 0]} castShadow>
-        <boxGeometry args={[0.5, 0.05, 0.5]} />
-        <meshStandardMaterial color="#333028" />
-      </mesh>
-      {/* Back */}
-      <mesh position={[0, 0.8, -0.22]} castShadow>
-        <boxGeometry args={[0.5, 0.7, 0.04]} />
-        <meshStandardMaterial color="#333028" />
-      </mesh>
-      {/* Legs */}
-      {[[-0.2, 0, -0.2], [0.2, 0, -0.2], [-0.2, 0, 0.2], [0.2, 0, 0.2]].map((pos, i) => (
-        <mesh key={i} position={[pos[0], 0.225, pos[2]]}>
-          <boxGeometry args={[0.03, 0.45, 0.03]} />
-          <meshStandardMaterial color="#1a1816" />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function StudentAvatar({ position, color }: { position: [number, number, number]; color: string }) {
-  const ref = useRef<THREE.Group>(null!);
-
-  useFrame((state) => {
-    if (ref.current) {
-      // Subtle idle animation
-      ref.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5 + position[0]) * 0.05;
-      ref.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 0.8 + position[2]) * 0.01;
->>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
     }
     return (
       <p key={i} className="text-xs text-gray-400 leading-relaxed">
@@ -193,7 +62,7 @@ function downloadNotesPdf(data: LectureNotesData, videoTitle?: string) {
   doc.text(titleLines, m, y); y += titleLines.length * 22 + 8;
 
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(100);
-  doc.text(`Generated: ${new Date(data.created_at).toLocaleString()}`, m, y); y += 20;
+  doc.text(`Generated: ${new Date(data.created_at ?? Date.now()).toLocaleString()}`, m, y); y += 20;
   doc.text(`Source: ${videoTitle || "Lecture video"}`, m, y); y += 24;
 
   ensureSpace(28);
@@ -447,24 +316,13 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
   );
 }
 
-<<<<<<< HEAD
-=======
-// Chat message component
-interface ChatMsg {
-  id: number;
-  user: string;
-  text: string;
-  time: string;
-}
-
-// ── Error boundary so a Three.js crash shows a friendly message ──────────
 interface EBState { hasError: boolean; msg: string }
 class CanvasErrorBoundary extends Component<{ children: ReactNode }, EBState> {
   state: EBState = { hasError: false, msg: "" };
   static getDerivedStateFromError(err: Error): EBState {
     return { hasError: true, msg: err?.message || "render_error" };
   }
-  componentDidCatch(_err: Error, _info: ErrorInfo) {}
+  componentDidCatch() {}
   render() {
     if (this.state.hasError) {
       return (
@@ -480,9 +338,7 @@ class CanvasErrorBoundary extends Component<{ children: ReactNode }, EBState> {
     return this.props.children;
   }
 }
-// ──────────────────────────────────────────────────────────────────────────
 
->>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
 export function LiveClassroomWindow() {
   const { close } = useWindowManager();
 
@@ -554,7 +410,6 @@ export function LiveClassroomWindow() {
   return (
     <Window id="classroom">
       <div className="flex h-full" style={{ background: "#0a0a0f" }}>
-<<<<<<< HEAD
         {selectedTopicId && playlistOpen && (
           <PlaylistSidebar
             topicId={selectedTopicId}
@@ -569,33 +424,17 @@ export function LiveClassroomWindow() {
           <div className="flex-1 relative">
             {!selectedTopicId && <TopicPicker onSelect={handleTopicSelect} />}
 
-=======
-        {/* 3D Viewport */}
-        <div className="flex-1 relative">
-          <CanvasErrorBoundary>
->>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
+            <CanvasErrorBoundary>
             <Suspense
               fallback={
                 <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
                   <div className="text-center">
-<<<<<<< HEAD
                     <div className="text-5xl mb-4 animate-pulse">🎓</div>
                     <div className="text-amber-400 font-mono text-sm">Loading 3D Classroom…</div>
-=======
-                    <div className="text-4xl mb-4 animate-pulse">🎓</div>
-                    <div className="text-amber-400 font-mono text-sm">Loading 3D Classroom...</div>
-                    <div
-                      className="mt-2 w-32 h-1 rounded-full overflow-hidden mx-auto"
-                      style={{ background: "#222" }}
-                    >
-                      <div className="h-full bg-amber-500 animate-pulse rounded-full" style={{ width: "60%" }} />
-                    </div>
->>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
                   </div>
                 </div>
               }
             >
-<<<<<<< HEAD
               <Canvas shadows camera={{ position: [0, 15, 25], fov: 50 }} style={{ background: "#0a0a0f" }}>
                 <CameraAnimation />
                 <ClassroomLights />
@@ -621,17 +460,7 @@ export function LiveClassroomWindow() {
                 <OrbitControls makeDefault minDistance={4} maxDistance={20} minPolarAngle={0.2} maxPolarAngle={Math.PI / 2 - 0.05} target={[0, 3, -2]} />
               </Canvas>
             </Suspense>
-=======
-              <Canvas
-                shadows
-                camera={{ position: [0, 6, 10], fov: 50 }}
-                style={{ background: "#0a0a0f" }}
-              >
-                <ClassroomScene />
-              </Canvas>
-            </Suspense>
-          </CanvasErrorBoundary>
->>>>>>> b1f421ba69883ad1f5425b4116fcf443f49f3f92
+            </CanvasErrorBoundary>
 
             <div
               className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full max-w-[50%]"
