@@ -14,7 +14,8 @@ export type WindowId =
   | "community"
   | "profile"
   | "tutor"
-  | "summarizer";
+  | "summarizer"
+  | "practice";
 
 export interface WindowState {
   id: WindowId;
@@ -28,6 +29,32 @@ export interface WindowState {
   prevSize?: { w: number; h: number };
   zIndex: number;
   minSize: { w: number; h: number };
+  /** Optional cap below viewport (viewport always applies as hard max). */
+  maxSize?: { w: number; h: number };
+}
+
+export const WINDOW_TITLE_BAR_H = 32;
+export const WINDOW_EDGE_PAD = 4;
+
+export function getViewportWorkArea(): { w: number; h: number } {
+  if (typeof window === "undefined") return { w: 1280, h: 800 };
+  return {
+    w: Math.max(320, window.innerWidth - WINDOW_EDGE_PAD * 2),
+    h: Math.max(200, window.innerHeight - WINDOW_TITLE_BAR_H - WINDOW_EDGE_PAD),
+  };
+}
+
+export function clampWindowSize(
+  win: Pick<WindowState, "minSize" | "maxSize">,
+  size: { w: number; h: number }
+): { w: number; h: number } {
+  const vp = getViewportWorkArea();
+  const maxW = Math.min(win.maxSize?.w ?? vp.w, vp.w);
+  const maxH = Math.min(win.maxSize?.h ?? vp.h, vp.h);
+  return {
+    w: Math.min(Math.max(size.w, win.minSize.w), maxW),
+    h: Math.min(Math.max(size.h, win.minSize.h), maxH),
+  };
 }
 
 interface Ctx {
@@ -55,6 +82,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 120, y: 70 },
     size: { w: 820, h: 540 },
     minSize: { w: 400, h: 300 },
+    maxSize: { w: 1100, h: 720 },
   },
   programs: {
     id: "programs",
@@ -65,6 +93,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 200, y: 100 },
     size: { w: 880, h: 560 },
     minSize: { w: 500, h: 350 },
+    maxSize: { w: 1200, h: 800 },
   },
   instructors: {
     id: "instructors",
@@ -75,6 +104,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 240, y: 130 },
     size: { w: 860, h: 560 },
     minSize: { w: 500, h: 350 },
+    maxSize: { w: 1200, h: 800 },
   },
   enroll: {
     id: "enroll",
@@ -85,6 +115,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 300, y: 90 },
     size: { w: 720, h: 580 },
     minSize: { w: 400, h: 400 },
+    maxSize: { w: 900, h: 700 },
   },
   firefox: {
     id: "firefox",
@@ -95,6 +126,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 80, y: 40 },
     size: { w: 960, h: 620 },
     minSize: { w: 500, h: 350 },
+    maxSize: { w: 1280, h: 860 },
   },
   vscode: {
     id: "vscode",
@@ -105,6 +137,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 100, y: 50 },
     size: { w: 960, h: 600 },
     minSize: { w: 600, h: 400 },
+    maxSize: { w: 1280, h: 860 },
   },
   terminal: {
     id: "terminal",
@@ -115,6 +148,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 280, y: 140 },
     size: { w: 760, h: 460 },
     minSize: { w: 400, h: 250 },
+    maxSize: { w: 1100, h: 720 },
   },
   settings: {
     id: "settings",
@@ -125,6 +159,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 220, y: 100 },
     size: { w: 800, h: 570 },
     minSize: { w: 500, h: 400 },
+    maxSize: { w: 1000, h: 720 },
   },
   courses: {
     id: "courses",
@@ -135,6 +170,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 160, y: 80 },
     size: { w: 900, h: 600 },
     minSize: { w: 600, h: 400 },
+    maxSize: { w: 1280, h: 860 },
   },
   classroom: {
     id: "classroom",
@@ -145,6 +181,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 100, y: 50 },
     size: { w: 960, h: 620 },
     minSize: { w: 600, h: 400 },
+    maxSize: { w: 1280, h: 860 },
   },
   community: {
     id: "community",
@@ -155,6 +192,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 140, y: 60 },
     size: { w: 880, h: 580 },
     minSize: { w: 500, h: 350 },
+    maxSize: { w: 1200, h: 800 },
   },
   profile: {
     id: "profile",
@@ -165,6 +203,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 260, y: 90 },
     size: { w: 700, h: 540 },
     minSize: { w: 400, h: 350 },
+    maxSize: { w: 900, h: 680 },
   },
   tutor: {
     id: "tutor",
@@ -175,6 +214,7 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 160, y: 70 },
     size: { w: 860, h: 600 },
     minSize: { w: 520, h: 420 },
+    maxSize: { w: 1200, h: 820 },
   },
   summarizer: {
     id: "summarizer",
@@ -185,6 +225,18 @@ const DEFAULTS: Record<WindowId, Omit<WindowState, "zIndex">> = {
     position: { x: 180, y: 80 },
     size: { w: 980, h: 620 },
     minSize: { w: 720, h: 480 },
+    maxSize: { w: 1280, h: 860 },
+  },
+  practice: {
+    id: "practice",
+    title: "AI Question Practice",
+    isOpen: false,
+    isMinimized: false,
+    isMaximized: false,
+    position: { x: 120, y: 60 },
+    size: { w: 1000, h: 640 },
+    minSize: { w: 720, h: 480 },
+    maxSize: { w: 1280, h: 860 },
   },
 };
 
@@ -207,10 +259,19 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
 
   const open = useCallback((id: WindowId) => {
     const z = bump();
-    setWindows((w) => ({
-      ...w,
-      [id]: { ...w[id], isOpen: true, isMinimized: false, zIndex: z },
-    }));
+    setWindows((w) => {
+      const win = w[id];
+      return {
+        ...w,
+        [id]: {
+          ...win,
+          isOpen: true,
+          isMinimized: false,
+          zIndex: z,
+          size: clampWindowSize(win, win.size),
+        },
+      };
+    });
   }, [bump]);
 
   const close = useCallback((id: WindowId) => {
@@ -225,18 +286,17 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     setWindows((w) => {
       const win = w[id];
       if (win.isMaximized) {
-        // Restore
+        const restored = clampWindowSize(win, win.prevSize ?? DEFAULTS[id].size);
         return {
           ...w,
           [id]: {
             ...win,
             isMaximized: false,
             position: win.prevPosition ?? DEFAULTS[id].position,
-            size: win.prevSize ?? DEFAULTS[id].size,
+            size: restored,
           },
         };
       }
-      // Maximize
       return {
         ...w,
         [id]: {
@@ -244,8 +304,11 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
           isMaximized: true,
           prevPosition: { ...win.position },
           prevSize: { ...win.size },
-          position: { x: 0, y: 32 },
-          size: { w: window.innerWidth, h: window.innerHeight - 32 },
+          position: { x: 0, y: WINDOW_TITLE_BAR_H },
+          size: {
+            w: window.innerWidth,
+            h: window.innerHeight - WINDOW_TITLE_BAR_H,
+          },
         },
       };
     });
@@ -263,9 +326,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   const resize = useCallback((id: WindowId, size: { w: number; h: number }) => {
     setWindows((w) => {
       const win = w[id];
-      const newW = Math.max(size.w, win.minSize.w);
-      const newH = Math.max(size.h, win.minSize.h);
-      return { ...w, [id]: { ...win, size: { w: newW, h: newH } } };
+      return { ...w, [id]: { ...win, size: clampWindowSize(win, size) } };
     });
   }, []);
 

@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "sets": [
+    {
+      "id": "internet-networking-topic",
+      "topic_id": "internet-networking",
+      "video_id": null,
+      "title": "Internet & Networking — Topic Review",
+      "topicTitle": "Internet & Networking",
+      "scopeLabel": "Topic: Internet & Networking",
+      "mcq": [
+        {
+          "id": "mcq-1",
+          "question": "What is the primary purpose of the Domain Name System (DNS)?",
+          "choices": [
+            "Translate human-readable domain names to IP addresses",
+            "Encrypt web traffic between browser and server",
+            "Assign MAC addresses to network interfaces",
+            "Route packets between autonomous systems only"
+          ],
+          "correctIndex": 0,
+          "explanation": "DNS maps names like example.com to IP addresses so users do not need to remember numeric addresses."
+        },
+        {
+          "id": "mcq-2",
+          "question": "Which layer of the TCP/IP model is responsible for end-to-end reliable delivery?",
+          "choices": ["Network layer", "Transport layer", "Data link layer", "Application layer"],
+          "correctIndex": 1,
+          "explanation": "TCP operates at the transport layer, providing reliable, ordered delivery between hosts."
+        },
+        {
+          "id": "mcq-3",
+          "question": "A packet is best described as:",
+          "choices": [
+            "A small unit of data forwarded independently across networks",
+            "A physical cable connecting two routers",
+            "A type of firewall rule",
+            "A DNS record for mail servers"
+          ],
+          "correctIndex": 0,
+          "explanation": "Packets are discrete chunks of data with headers; routers forward them hop by hop."
+        },
+        {
+          "id": "mcq-4",
+          "question": "HTTPS primarily adds which property compared to HTTP?",
+          "choices": ["Faster routing", "Encryption and integrity", "Larger packet size", "Static IP assignment"],
+          "correctIndex": 1,
+          "explanation": "HTTPS uses TLS to encrypt data and protect against tampering in transit."
+        },
+        {
+          "id": "mcq-5",
+          "question": "What does an IP address uniquely identify on an IP network?",
+          "choices": ["A user account", "A host interface", "A web page title", "A domain registrar"],
+          "correctIndex": 1,
+          "explanation": "An IP address identifies a network interface participating in IP routing."
+        }
+      ],
+      "shortAnswer": [
+        {
+          "id": "short-1",
+          "question": "Explain the difference between bandwidth and latency in one paragraph.",
+          "modelAnswer": "Bandwidth is the maximum data rate a link can carry (throughput capacity), while latency is the time delay for a packet to travel from source to destination. High bandwidth does not guarantee low latency."
+        },
+        {
+          "id": "short-2",
+          "question": "What happens when you type a URL in a browser? List the main steps briefly.",
+          "modelAnswer": "DNS resolves the hostname to an IP; TCP connection is established; TLS handshake if HTTPS; HTTP request is sent; server responds; browser renders the response."
+        }
+      ],
+      "theory": [
+        {
+          "id": "theory-1",
+          "question": "Compare connection-oriented (TCP) and connectionless (UDP) transport. When would you choose each?",
+          "modelAnswer": "TCP provides reliable, ordered byte streams with retransmissions—ideal for web, email, and file transfer. UDP sends datagrams without guaranteed delivery—used for real-time media, DNS queries, and gaming where speed matters more than perfect reliability. Choice depends on tolerance for loss versus need for ordering.",
+          "rubric": "Mention reliability, ordering, use cases, and trade-offs."
+        }
+      ]
+    },
+    {
+      "id": "internet-networking-net-01",
+      "topic_id": "internet-networking",
+      "video_id": "net-01",
+      "title": "How the Internet Works — Practice",
+      "topicTitle": "Internet & Networking",
+      "scopeLabel": "Lecture: How does the Internet work?",
+      "mcq": [
+        {
+          "id": "mcq-1",
+          "question": "The Internet is best described as:",
+          "choices": [
+            "A network of networks using common protocols",
+            "A single company-owned cable system",
+            "Only the World Wide Web",
+            "A replacement for all local networks"
+          ],
+          "correctIndex": 0,
+          "explanation": "The Internet interconnects many autonomous networks using IP and other standard protocols."
+        },
+        {
+          "id": "mcq-2",
+          "question": "Routers primarily operate at which layer?",
+          "choices": ["Physical", "Data link", "Network", "Application"],
+          "correctIndex": 2,
+          "explanation": "Routers forward packets based on IP addresses (network layer)."
+        }
+      ],
+      "shortAnswer": [
+        {
+          "id": "short-1",
+          "question": "What role does a router play in delivering your email or web request?",
+          "modelAnswer": "Routers examine destination IP addresses and forward packets toward the next hop along the path to the destination."
+        }
+      ],
+      "theory": []
+    },
+    {
+      "id": "programming-fundamentals-topic",
+      "topic_id": "programming-fundamentals",
+      "video_id": null,
+      "title": "Programming Fundamentals — Topic Review",
+      "topicTitle": "Programming Fundamentals",
+      "scopeLabel": "Topic: Programming Fundamentals",
+      "mcq": [
+        {
+          "id": "mcq-1",
+          "question": "What is the time complexity of binary search on a sorted array of n elements?",
+          "choices": ["O(n)", "O(log n)", "O(n log n)", "O(1)"],
+          "correctIndex": 1,
+          "explanation": "Each step halves the search space, giving logarithmic time."
+        },
+        {
+          "id": "mcq-2",
+          "question": "A stack data structure follows which order?",
+          "choices": ["FIFO", "LIFO", "Random access only", "Sorted order"],
+          "correctIndex": 1,
+          "explanation": "Stack: Last In, First Out—like a pile of plates."
+        },
+        {
+          "id": "mcq-3",
+          "question": "Big O notation is used to describe:",
+          "choices": [
+            "Asymptotic growth of resource use vs input size",
+            "Exact clock cycles on one CPU",
+            "Memory address layout",
+            "Syntax errors in code"
+          ],
+          "correctIndex": 0,
+          "explanation": "Big O characterizes how algorithms scale as input grows."
+        },
+        {
+          "id": "mcq-4",
+          "question": "Which structure allows O(1) average lookup by key?",
+          "choices": ["Linked list", "Hash table", "Binary search tree (always)", "Queue"],
+          "correctIndex": 1,
+          "explanation": "Hash tables map keys to buckets for fast average-case lookup."
+        }
+      ],
+      "shortAnswer": [
+        {
+          "id": "short-1",
+          "question": "Define recursion in your own words and give a simple example.",
+          "modelAnswer": "Recursion is when a function calls itself on smaller subproblems until a base case stops it. Example: factorial(n) = n * factorial(n-1) with factorial(0)=1."
+        }
+      ],
+      "theory": [
+        {
+          "id": "theory-1",
+          "question": "Explain how a hash table works and one collision resolution strategy.",
+          "modelAnswer": "A hash function maps keys to bucket indices. Collisions occur when two keys hash to the same bucket. Chaining stores a linked list per bucket; open addressing probes alternative slots. Average O(1) lookup holds with a good hash and load factor.",
+          "rubric": "Hash function, collision, chaining or probing, complexity mention."
+        }
+      ]
+    },
+    {
+      "id": "mathematics-topic",
+      "topic_id": "mathematics",
+      "video_id": null,
+      "title": "Mathematics for CS — Topic Review",
+      "topicTitle": "Mathematics for CS",
+      "scopeLabel": "Topic: Mathematics for CS",
+      "mcq": [
+        {
+          "id": "mcq-1",
+          "question": "A vector in R² can be represented as:",
+          "choices": ["An ordered pair (x, y)", "A single scalar only", "A 3×3 matrix only", "A random string"],
+          "correctIndex": 0,
+          "explanation": "Two-dimensional vectors are ordered pairs of real numbers."
+        },
+        {
+          "id": "mcq-2",
+          "question": "Scalar multiplication of a vector changes:",
+          "choices": [
+            "Its magnitude and possibly direction",
+            "Only its direction never",
+            "The number of dimensions",
+            "The origin point only"
+          ],
+          "correctIndex": 0,
+          "explanation": "Scaling stretches or shrinks the vector; negative scalars reverse direction."
+        },
+        {
+          "id": "mcq-3",
+          "question": "The dot product of two perpendicular vectors is:",
+          "choices": ["Zero", "Always one", "Their sum", "Undefined"],
+          "correctIndex": 0,
+          "explanation": "Orthogonal vectors have dot product zero in Euclidean space."
+        }
+      ],
+      "shortAnswer": [
+        {
+          "id": "short-1",
+          "question": "State the tip-to-tail rule for adding two vectors geometrically.",
+          "modelAnswer": "Place the tail of the second vector at the tip of the first; the sum is the vector from the tail of the first to the tip of the second."
+        }
+      ],
+      "theory": [
+        {
+          "id": "theory-1",
+          "question": "Explain the geometric and numeric views of a vector and why both matter in linear algebra.",
+          "modelAnswer": "Geometrically, vectors are arrows with magnitude and direction (translations in space). Numerically, they are lists of coordinates relative to a basis. CS uses numeric form for computation; geometry gives intuition for transformations, projections, and machine learning.",
+          "rubric": "Both views, coordinates, applications."
+        }
+      ]
+    },
+    {
+      "id": "physics-science-topic",
+      "topic_id": "physics-science",
+      "video_id": null,
+      "title": "Physics & Science — Topic Review",
+      "topicTitle": "Physics & Science",
+      "scopeLabel": "Topic: Physics & Science",
+      "mcq": [
+        {
+          "id": "mcq-1",
+          "question": "Newton's second law states:",
+          "choices": ["F = ma", "Energy is conserved always", "V = IR", "PV = nRT"],
+          "correctIndex": 0,
+          "explanation": "Force equals mass times acceleration."
+        },
+        {
+          "id": "mcq-2",
+          "question": "Ohm's law relates:",
+          "choices": ["Voltage, current, and resistance", "Mass and weight", "Pressure and volume only", "Frequency and wavelength only"],
+          "correctIndex": 0,
+          "explanation": "V = I × R for many conductors."
+        },
+        {
+          "id": "mcq-3",
+          "question": "Atomic number in the periodic table equals:",
+          "choices": ["Number of protons", "Number of neutrons only", "Atomic mass rounded", "Group number"],
+          "correctIndex": 0,
+          "explanation": "Proton count defines the element."
+        }
+      ],
+      "shortAnswer": [
+        {
+          "id": "short-1",
+          "question": "What is the difference between speed and velocity?",
+          "modelAnswer": "Speed is scalar (magnitude only); velocity is vector (magnitude and direction)."
+        }
+      ],
+      "theory": [
+        {
+          "id": "theory-1",
+          "question": "Describe Ohm's law and a simple series circuit calculation.",
+          "modelAnswer": "Ohm's law: V = IR. In series, current is the same through each resistor and total resistance is the sum of individual resistances. Total voltage divides across resistors proportionally to R.",
+          "rubric": "State law, series rules, example or formula."
+        }
+      ]
+    }
+  ]
+}

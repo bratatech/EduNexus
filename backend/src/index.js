@@ -22,6 +22,7 @@ import { communityRouter } from "./routes/community.js";
 import { realtimeRouter } from "./routes/realtime.js";
 import { meRouter } from "./routes/me.js";
 import { classroomRouter } from "./routes/classroom.js";
+import { practiceRouter } from "./routes/practice.js";
 import { attachSocketServer } from "./realtime/socket.js";
 
 const app = express();
@@ -72,6 +73,7 @@ app.use("/api/community", communityRouter({ db }));
 app.use("/api/realtime", realtimeRouter());
 app.use("/api/me", meRouter({ db }));
 app.use("/api/classroom", classroomRouter({ db }));
+app.use("/api/practice", practiceRouter());
 
 app.use((err, _req, res, _next) => {
   console.error(err);

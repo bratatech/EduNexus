@@ -1,7 +1,13 @@
-// In dev, use same-origin + Vite proxy (/api → backend). In prod, set VITE_API_BASE_URL.
+// In dev, use same-origin + Vite proxy (/api → backend). In prod, set VITE_API_BASE_URL at build time.
 const API_BASE_URL: string =
   import.meta.env.VITE_API_BASE_URL ??
-  (import.meta.env.DEV ? "" : "http://localhost:8080");
+  (import.meta.env.DEV ? "" : "");
+
+if (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL) {
+  console.warn(
+    "[EduNexuZ] VITE_API_BASE_URL is not set. API calls will fail until you add it in Netlify → Site settings → Environment variables and redeploy."
+  );
+}
 
 export type ApiErrorCode = string;
 
@@ -301,6 +307,7 @@ export const api = {
     topicTitle,
     topicDescription,
     videoDescription,
+    regenerate = false,
   }: {
     videoUrl: string;
     title?: string;
@@ -310,7 +317,8 @@ export const api = {
     topicTitle?: string;
     topicDescription?: string;
     videoDescription?: string;
-  }): Promise<{ ok: boolean; data: unknown; cached?: boolean }> => {
+    regenerate?: boolean;
+  }): Promise<{ ok: boolean; data: unknown; cached?: boolean; regenerated?: boolean }> => {
     return (await apiFetch("/api/ai/lecture-notes", {
       method: "POST",
       body: {
@@ -322,9 +330,10 @@ export const api = {
         topicTitle,
         topicDescription,
         videoDescription,
+        regenerate,
       },
       auth: true,
-    })) as { ok: boolean; data: unknown; cached?: boolean };
+    })) as { ok: boolean; data: unknown; cached?: boolean; regenerated?: boolean };
   },
 
   aiLectureNotesCached: async ({
@@ -345,6 +354,51 @@ export const api = {
 
   classroomTopicPlaylist: async (topicId: string): Promise<{ data: unknown }> => {
     return (await apiFetch(`/api/classroom/topics/${encodeURIComponent(topicId)}`)) as { data: unknown };
+  },
+
+  practiceSetsList: async (): Promise<{ data: unknown[] }> => {
+    return (await apiFetch("/api/practice/sets")) as { data: unknown[] };
+  },
+
+  practiceByTopic: async (topicId: string): Promise<{ data: unknown; source?: string }> => {
+    return (await apiFetch(`/api/practice/by-topic/${encodeURIComponent(topicId)}`)) as {
+      data: unknown;
+      source?: string;
+    };
+  },
+
+  practiceByLecture: async (
+    topicId: string,
+    videoId: string
+  ): Promise<{ data: unknown; source?: string }> => {
+    return (await apiFetch(
+      `/api/practice/by-lecture/${encodeURIComponent(topicId)}/${encodeURIComponent(videoId)}`
+    )) as { data: unknown; source?: string };
+  },
+
+  aiPracticeGenerate: async (body: {
+    topicId: string;
+    topicTitle?: string;
+    videoId?: string;
+    videoTitle?: string;
+    numMcq: number;
+    numShort: number;
+    numTheory: number;
+  }) => {
+    return (await apiFetch("/api/ai/practice/generate", { method: "POST", body, auth: true })) as {
+      ok: boolean;
+      data: unknown;
+    };
+  },
+
+  aiPracticeGradeMcq: async (body: {
+    questions: unknown[];
+    answers: Record<string, number>;
+  }) => {
+    return (await apiFetch("/api/ai/practice/grade-mcq", { method: "POST", body, auth: true })) as {
+      ok: boolean;
+      data: unknown;
+    };
   },
 
   classroomAddVideo: async (

@@ -1,4 +1,4 @@
-import { FileText, Folder, Users, Send, Globe, Code2, TerminalSquare, Settings as SettingsIcon, BookOpen, GraduationCap, MessageCircle, UserCircle, Sparkles } from "lucide-react";
+import { FileText, Folder, Users, Send, Globe, Code2, TerminalSquare, Settings as SettingsIcon, BookOpen, GraduationCap, MessageCircle, UserCircle, Sparkles, ClipboardList } from "lucide-react";
 import { useWindowManager, type WindowId } from "@/lib/window-manager";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const ICONS: { id: WindowId; label: string; Icon: React.ComponentType<{ classNam
   { id: "settings", label: "Settings", Icon: SettingsIcon },
   { id: "courses", label: "Courses", Icon: BookOpen },
   { id: "classroom", label: "Classroom", Icon: GraduationCap },
+  { id: "practice", label: "Practice", Icon: ClipboardList },
   { id: "tutor", label: "AI Tutor", Icon: Sparkles },
   { id: "summarizer", label: "Summarizer", Icon: Sparkles },
   { id: "community", label: "Community", Icon: MessageCircle },

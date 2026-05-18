@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Home, BookOpen, Users, Mail, Globe, Code2, TerminalSquare, Settings, GraduationCap, MessageCircle, UserCircle, Layers, Sparkles } from "lucide-react";
+import { Home, BookOpen, Users, Mail, Globe, Code2, TerminalSquare, Settings, GraduationCap, MessageCircle, UserCircle, Layers, Sparkles, ClipboardList } from "lucide-react";
 import { useWindowManager, type WindowId } from "@/lib/window-manager";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const DOCK: { id: WindowId; label: string; Icon: React.ComponentType<{ className
   { id: "terminal", label: "Terminal", Icon: TerminalSquare },
   { id: "courses", label: "Courses", Icon: Layers },
   { id: "classroom", label: "Classroom", Icon: GraduationCap },
+  { id: "practice", label: "Practice", Icon: ClipboardList },
   { id: "tutor", label: "AI Tutor", Icon: Sparkles },
   { id: "summarizer", label: "Summarizer", Icon: Sparkles },
   { id: "community", label: "Community", Icon: MessageCircle },

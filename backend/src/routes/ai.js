@@ -149,7 +149,81 @@ export function aiRouter({ db }) {
     return cleanUrl;
   }
 
-  function buildLectureNotesPrompt({ cleanUrl, reqTitle, topicTitle, topicDescription, videoDescription }) {
+  function findLectureNotesRow(rows, wallet, videoId, topicId) {
+    if (!videoId) return null;
+    return (
+      rows.find(
+        (x) =>
+          x &&
+          typeof x === "object" &&
+          x.wallet === wallet &&
+          x.source_type === "lecture_video" &&
+          x.video_id === videoId &&
+          (!topicId || x.topic_id === topicId)
+      ) || null
+    );
+  }
+
+  /** Clean and structure plain-text summary for display (no JSON/markdown debris). */
+  function formatLectureSummaryText(summary) {
+    let s = stripCodeFences(String(summary || "")).trim();
+    if (s.startsWith("{") || s.includes('"highlightedNotes"') || s.includes('"summary"')) {
+      try {
+        const inner = JSON.parse(extractFirstJsonObject(s) || s);
+        if (typeof inner.summary === "string") s = inner.summary.trim();
+      } catch { /* keep s */ }
+    }
+    s = s
+      .replace(/\r\n/g, "\n")
+      .replace(/```(?:json)?/gi, "")
+      .replace(/```/g, "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .replace(/^#+\s*/gm, "")
+      .replace(/^\s*\{\s*"title"\s*:[\s\S]*$/im, "")
+      .trim();
+
+    const sectionNames = [
+      "Overview",
+      "Key Concepts",
+      "Key Concepts and Definitions",
+      "How It Works",
+      "Process and Steps",
+      "Examples",
+      "Common Misconceptions",
+      "Concept Connections",
+      "Timeline",
+      "Lecture Flow",
+      "Timeline / Lecture Flow",
+      "Quick Self-Check",
+      "Glossary",
+    ];
+    for (const name of sectionNames) {
+      const re = new RegExp(`(^|\\n)\\s*(${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})\\s*:?\\s*`, "gi");
+      s = s.replace(re, `\n\n$2\n`);
+    }
+
+    const lines = s.split("\n").map((line) => {
+      let t = line.trimEnd();
+      const trimmed = t.trim();
+      if (!trimmed) return "";
+      if (/^[-•*]\s+/.test(trimmed)) return `- ${trimmed.replace(/^[-•*]\s+/, "")}`;
+      if (/^\d+\.\s+/.test(trimmed)) return `- ${trimmed.replace(/^\d+\.\s+/, "")}`;
+      if (/^(definition|intuition|why it matters|example|common confusion|formula|step)\s*:/i.test(trimmed)) {
+        return `  - ${trimmed}`;
+      }
+      if (/^concept\s*:\s*/i.test(trimmed)) return `\n${trimmed}`;
+      return trimmed;
+    });
+
+    s = lines
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    return s;
+  }
+
+  function buildLectureNotesPrompt({ cleanUrl, reqTitle, topicTitle, topicDescription, videoDescription, regenerate = false }) {
     const ctx = [
       topicTitle ? `Course topic: ${topicTitle}` : "",
       topicDescription ? `Topic overview: ${topicDescription}` : "",
@@ -163,6 +237,7 @@ export function aiRouter({ db }) {
       `Watch and analyse the attached YouTube lecture video.\n` +
       `Video URL: ${cleanUrl}\n` +
       (ctx ? `${ctx}\n` : "") +
+      `${regenerate ? "\nREGENERATE: Produce fresh, improved notes (deeper detail than a prior draft). Do not repeat generic filler.\n" : ""}` +
       `\nGenerate VERY detailed, structured, and elaborate class notes from the actual lecture content.\n` +
       `Base every section on what is taught in the video — do not invent unrelated material.\n\n` +
       `Return ONLY valid JSON (no markdown, no code fences) with this schema:\n` +
@@ -173,36 +248,47 @@ export function aiRouter({ db }) {
       `    { "note": string, "importance": "high"|"medium"|"low" }\n` +
       `  ]\n` +
       `}\n\n` +
-      `Requirements for "summary":\n` +
-      `- Write professional-grade study notes (NOT a paragraph dump).\n` +
-      `- Use simple section headings like "Overview", "Key Concepts", "How It Works", "Examples", "Common Misconceptions", "Quick Self-Check", "Glossary".\n` +
-      `- For each key concept: definition (1-2 lines) + intuition + why it matters + mini example + common confusion.\n` +
-      `- Identify and explain AT LEAST 10-15 key concepts from the lecture (use the lecturer's terminology).\n` +
-      `- Include a "Timeline / Lecture flow" section with 5-8 bullets mapping the order topics were presented.\n` +
-      `- Target 1400-2200 words.\n` +
-      `- Use bullet points ("- ") for lists.\n` +
-      `- IMPORTANT: "summary" must be human-readable plain text for students — NOT JSON, NOT { braces }, NOT "key": value syntax.\n` +
-      `- Write in a formal, clear academic tone suitable for exam revision.\n` +
-      `- Do NOT use markdown symbols like #, **, __, or code fences.\n` +
-      `- If the lecture covers a technical topic, include complexity, diagrams description, or formulas as text.\n` +
-      `- End with 5 "Quick Self-Check" questions a student should answer after watching.\n` +
-      `- End with a "Glossary" of 10+ key terms with brief definitions.\n\n` +
-      `Requirements for "highlightedNotes" (REQUIRED — minimum 15 items):\n` +
-      `- Each item is one precise, formal sentence capturing a key takeaway.\n` +
-      `- Mark importance: high = core concept/formula/main result, medium = supporting point, low = tip/context.\n` +
+      `Requirements for "summary" (plain text inside the JSON string):\n` +
+      `- Use EXACTLY these section headings on their own line (no # symbols): Overview, Key Concepts, How It Works, Examples, Common Misconceptions, Concept Connections, Timeline / Lecture Flow, Quick Self-Check, Glossary.\n` +
+      `- Under Key Concepts, for EACH concept use this pattern:\n` +
+      `  Concept: <name>\n` +
+      `  - Definition: <1-2 sentences>\n` +
+      `  - Intuition: <mental model>\n` +
+      `  - Why it matters: <exam/real-world relevance>\n` +
+      `  - Example: <short concrete example>\n` +
+      `  - Common confusion: <one pitfall>\n` +
+      `- Cover AT LEAST 12 concepts from the lecture using the lecturer's terms.\n` +
+      `- Use "- " bullets only (no numbered lists in summary).\n` +
+      `- Target 1600-2400 words. Be elaborate and explainable — a student should understand without rewatching.\n` +
+      `- NEVER put JSON, braces, or "highlightedNotes" inside summary.\n` +
+      `- No markdown (#, **, __, code fences).\n` +
+      `- Quick Self-Check: exactly 5 questions as bullets.\n` +
+      `- Glossary: at least 12 terms, each as "- Term: definition".\n\n` +
+      `Requirements for "highlightedNotes" (REQUIRED — minimum 18 items):\n` +
+      `- One complete sentence per item; specific to this lecture (not generic study tips).\n` +
+      `- high = core idea/formula/theorem, medium = supporting detail, low = context/tip.\n` +
       `- Do NOT leave highlightedNotes empty.\n\n` +
       `CRITICAL: Return raw JSON only. Do NOT wrap the response in markdown code fences.\n` +
       `Lecture title hint: ${reqTitle || "(none provided)"}`
     );
   }
 
-  async function generateLectureNotesWithGemini({ model, cleanUrl, reqTitle, topicTitle, topicDescription, videoDescription }) {
+  async function generateLectureNotesWithGemini({
+    model,
+    cleanUrl,
+    reqTitle,
+    topicTitle,
+    topicDescription,
+    videoDescription,
+    regenerate = false,
+  }) {
     const notePrompt = buildLectureNotesPrompt({
       cleanUrl,
       reqTitle,
       topicTitle,
       topicDescription,
       videoDescription,
+      regenerate,
     });
     const lectureTimeoutMs = Number(process.env.AI_LECTURE_NOTES_TIMEOUT_MS || 240_000);
     const videoParts = [
@@ -325,7 +411,7 @@ export function aiRouter({ db }) {
       unwrapSummaryJson();
     }
 
-    summary = stripCodeFences(summary).trim();
+    summary = formatLectureSummaryText(summary);
 
     highlightedNotes = highlightedNotes
       .map((n) => ({
@@ -334,9 +420,24 @@ export function aiRouter({ db }) {
       }))
       .filter((n) => n.note.length > 0);
 
-    if (highlightedNotes.length < 8 && summary.length > 300) {
+    if (highlightedNotes.length < 10 && summary.length > 300) {
       const derived = extractHighlightsFromSummary(summary);
       if (derived.length > highlightedNotes.length) highlightedNotes = derived;
+    }
+
+    // Pull extra highlights from concept definitions if still sparse
+    if (highlightedNotes.length < 12) {
+      const conceptLines = summary
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => /^- (Definition|Intuition|Why it matters):/i.test(l))
+        .slice(0, 8);
+      for (const line of conceptLines) {
+        const note = line.replace(/^-\s*/, "").trim();
+        if (note.length > 20 && !highlightedNotes.some((h) => h.note === note)) {
+          highlightedNotes.push({ note, importance: "medium" });
+        }
+      }
     }
 
     return { title, summary, highlightedNotes };
@@ -831,6 +932,7 @@ export function aiRouter({ db }) {
       topicTitle: z.string().max(200).optional(),
       topicDescription: z.string().max(1000).optional(),
       videoDescription: z.string().max(1000).optional(),
+      regenerate: z.boolean().optional(),
     });
     const parsed = bodySchema.safeParse(req.body || {});
     if (!parsed.success) return res.status(400).json({ error: "invalid_body" });
@@ -838,23 +940,24 @@ export function aiRouter({ db }) {
     const model = getGeminiModel();
     if (!model) return res.status(501).json({ error: "gemini_not_configured" });
 
-    const { videoUrl, title: reqTitle, classroomId, topicId, videoId, topicTitle, topicDescription, videoDescription } =
-      parsed.data;
+    const {
+      videoUrl,
+      title: reqTitle,
+      classroomId,
+      topicId,
+      videoId,
+      topicTitle,
+      topicDescription,
+      videoDescription,
+      regenerate = false,
+    } = parsed.data;
     const cleanUrl = normalizeYoutubeWatchUrl(videoUrl);
 
-    // Return existing notes if already generated for this video
-    if (videoId) {
-      const rows = await getDocSummariesStore();
-      const existing = rows.find(
-        (x) =>
-          x &&
-          typeof x === "object" &&
-          x.wallet === req.user.wallet &&
-          x.source_type === "lecture_video" &&
-          x.video_id === videoId &&
-          (!topicId || x.topic_id === topicId)
-      );
-      if (existing?.summary) {
+    let rows = await getDocSummariesStore();
+    const existing = videoId ? findLectureNotesRow(rows, req.user.wallet, videoId, topicId) : null;
+
+    // Return cached notes only when not explicitly regenerating
+    if (!regenerate && videoId && existing?.summary) {
         const normalized = finalizeLectureNotes(
           {
             title: existing.title,
@@ -863,17 +966,16 @@ export function aiRouter({ db }) {
           },
           existing.title
         );
-        return res.json({
-          ok: true,
-          cached: true,
-          data: {
-            ...existing,
-            title: normalized.title,
-            summary: normalized.summary,
-            highlighted_notes: normalized.highlightedNotes,
-          },
-        });
-      }
+    return res.json({
+      ok: true,
+      cached: true,
+      data: {
+        ...existing,
+        title: normalized.title,
+        summary: normalized.summary,
+        highlighted_notes: normalized.highlightedNotes,
+      },
+    });
     }
 
     let out = "";
@@ -886,6 +988,7 @@ export function aiRouter({ db }) {
         topicTitle,
         topicDescription,
         videoDescription,
+        regenerate,
       });
     } catch (e) {
       if (e && typeof e === "object" && "status" in e && e.status === 404) {
@@ -900,6 +1003,7 @@ export function aiRouter({ db }) {
             topicTitle,
             topicDescription,
             videoDescription,
+            regenerate,
           });
         } catch (fb) {
           console.error("[ai/lecture-notes] Gemini fallback failed:", fb?.message || fb);
@@ -927,27 +1031,240 @@ export function aiRouter({ db }) {
     });
     const notes = finalizeLectureNotes(parsedNotes, reqTitle);
 
-    // Persist to the same document_summaries store for reuse
-    const rows = await getDocSummariesStore();
+    if (!notes.summary || notes.summary.trim().length < 80) {
+      console.error("[ai/lecture-notes] Empty or too-short summary after parse");
+      return res.status(502).json({
+        error: "notes_generation_failed",
+        detail: "AI returned incomplete notes. Please try Regenerate again.",
+      });
+    }
+
+    // Persist — replace existing row for this video when regenerating
+    rows = await getDocSummariesStore();
+    const now = new Date().toISOString();
     const row = {
-      id: randomUUID(),
+      id: existing?.id || randomUUID(),
       wallet: req.user.wallet,
-      filename: `lecture_${Date.now()}.notes`,
+      filename: existing?.filename || `lecture_${Date.now()}.notes`,
       mimetype: "text/plain",
       title: notes.title,
-      classroom_id: classroomId || null,
-      topic_id: topicId || null,
-      video_id: videoId || null,
-      topic_title: topicTitle || null,
+      classroom_id: classroomId ?? existing?.classroom_id ?? null,
+      topic_id: topicId ?? existing?.topic_id ?? null,
+      video_id: videoId ?? existing?.video_id ?? null,
+      topic_title: topicTitle ?? existing?.topic_title ?? null,
       source_type: "lecture_video",
       source_url: cleanUrl,
-      created_at: new Date().toISOString(),
+      created_at: now,
       summary: notes.summary,
       highlighted_notes: notes.highlightedNotes,
     };
-    await setDocSummariesStore([row, ...rows]);
+    const withoutDupes = rows.filter(
+      (x) =>
+        !(
+          x &&
+          typeof x === "object" &&
+          x.wallet === req.user.wallet &&
+          x.source_type === "lecture_video" &&
+          videoId &&
+          x.video_id === videoId &&
+          (!topicId || x.topic_id === topicId)
+        )
+    );
+    await setDocSummariesStore([row, ...withoutDupes]);
 
-    return res.json({ ok: true, data: row });
+    return res.json({ ok: true, cached: false, regenerated: !!regenerate, data: row });
+  }));
+
+  function buildPracticePrompt({ topicTitle, videoTitle, contextNotes, numMcq, numShort, numTheory }) {
+    return (
+      `You are an expert exam writer for university-level courses.\n` +
+      `Topic: ${topicTitle || "General"}\n` +
+      (videoTitle ? `Lecture focus: ${videoTitle}\n` : "") +
+      (contextNotes ? `Study context (from lecture notes):\n${contextNotes.slice(0, 6000)}\n` : "") +
+      `\nCreate a practice assessment with EXACTLY:\n` +
+      `- ${numMcq} multiple-choice questions (4 options each, one correct)\n` +
+      `- ${numShort} short-answer questions (2-4 sentence expected answers)\n` +
+      `- ${numTheory} long theory questions (paragraph-level expected answers)\n` +
+      `\nReturn ONLY valid JSON (no markdown fences):\n` +
+      `{\n` +
+      `  "title": string,\n` +
+      `  "topicTitle": string,\n` +
+      `  "scopeLabel": string,\n` +
+      `  "mcq": [ { "id": string, "question": string, "choices": [string,string,string,string], "correctIndex": 0-3, "explanation": string } ],\n` +
+      `  "shortAnswer": [ { "id": string, "question": string, "modelAnswer": string } ],\n` +
+      `  "theory": [ { "id": string, "question": string, "modelAnswer": string, "rubric": string } ]\n` +
+      `}\n` +
+      `Rules:\n` +
+      `- Questions must be clear, exam-style, and specific to the topic/lecture.\n` +
+      `- MCQ distractors must be plausible; explanations must teach why the answer is correct.\n` +
+      `- Short/theory model answers must be complete, readable prose (not JSON, not bullet dumps).\n` +
+      `- Use unique ids like "mcq-1", "short-1", "theory-1".\n` +
+      `- Do NOT wrap output in code fences.\n`
+    );
+  }
+
+  function finalizePracticeSet(raw, meta = {}) {
+    let data = raw;
+    if (typeof raw === "string") {
+      try {
+        data = JSON.parse(extractFirstJsonObject(raw) || stripCodeFences(raw));
+      } catch {
+        data = {};
+      }
+    }
+    let title = String(data?.title || meta.title || "Practice Set");
+    let topicTitle = String(data?.topicTitle || meta.topicTitle || "");
+    let scopeLabel = String(data?.scopeLabel || meta.scopeLabel || "");
+    let mcq = Array.isArray(data?.mcq) ? data.mcq : [];
+    let shortAnswer = Array.isArray(data?.shortAnswer) ? data.shortAnswer : [];
+    let theory = Array.isArray(data?.theory) ? data.theory : [];
+
+    const cleanMcq = mcq
+      .map((q, i) => ({
+        id: String(q?.id || `mcq-${i + 1}`),
+        question: String(q?.question || "").trim(),
+        choices: (Array.isArray(q?.choices) ? q.choices : ["A", "B", "C", "D"]).map((c) => String(c)),
+        correctIndex: Math.max(0, Math.min(Number(q?.correctIndex ?? 0), 3)),
+        explanation: String(q?.explanation || "").trim(),
+      }))
+      .filter((q) => q.question.length > 0);
+
+    const cleanWritten = (arr, prefix) =>
+      (Array.isArray(arr) ? arr : [])
+        .map((q, i) => ({
+          id: String(q?.id || `${prefix}-${i + 1}`),
+          question: String(q?.question || "").trim(),
+          modelAnswer: String(q?.modelAnswer || q?.answer || "").trim(),
+          rubric: q?.rubric ? String(q.rubric) : undefined,
+        }))
+        .filter((q) => q.question.length > 0);
+
+    return {
+      title,
+      topicTitle,
+      scopeLabel,
+      mcq: cleanMcq,
+      shortAnswer: cleanWritten(shortAnswer, "short"),
+      theory: cleanWritten(theory, "theory"),
+    };
+  }
+
+  // POST /api/ai/practice/generate
+  r.post("/practice/generate", requireAuth, asyncHandler(async (req, res) => {
+    const bodySchema = z.object({
+      topicId: z.string().min(1).max(80),
+      topicTitle: z.string().max(200).optional(),
+      videoId: z.string().max(80).optional(),
+      videoTitle: z.string().max(200).optional(),
+      numMcq: z.number().int().min(0).max(30),
+      numShort: z.number().int().min(0).max(20),
+      numTheory: z.number().int().min(0).max(15),
+    });
+    const parsed = bodySchema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: "invalid_body" });
+
+    const total = parsed.data.numMcq + parsed.data.numShort + parsed.data.numTheory;
+    if (total < 1 || total > 40) return res.status(400).json({ error: "invalid_counts" });
+
+    const model = getGeminiModel();
+    if (!model) return res.status(501).json({ error: "gemini_not_configured" });
+
+    let contextNotes = "";
+    if (parsed.data.videoId) {
+      const rows = await getDocSummariesStore();
+      const hit = findLectureNotesRow(rows, req.user.wallet, parsed.data.videoId, parsed.data.topicId);
+      if (hit?.summary) contextNotes = String(hit.summary).slice(0, 8000);
+    }
+
+    const prompt = buildPracticePrompt({
+      topicTitle: parsed.data.topicTitle,
+      videoTitle: parsed.data.videoTitle,
+      contextNotes,
+      numMcq: parsed.data.numMcq,
+      numShort: parsed.data.numShort,
+      numTheory: parsed.data.numTheory,
+    });
+
+    let out = "";
+    try {
+      out = await withTimeout(
+        generateWithGeminiRetry({ model, prompt, retries: 2 }),
+        Number(process.env.AI_PRACTICE_TIMEOUT_MS || 120_000)
+      );
+    } catch (e) {
+      if (e?.message === "timeout") return res.status(504).json({ error: "ai_timeout" });
+      return res.status(502).json({ error: "gemini_unavailable" });
+    }
+
+    let parsedSet;
+    try {
+      const extracted = extractFirstJsonObject(out) || stripCodeFences(out);
+      parsedSet = JSON.parse(extracted);
+    } catch {
+      try {
+        const repaired = await summarizeRepairJson({ model, badText: out, filename: "Practice" });
+        parsedSet = JSON.parse(extractFirstJsonObject(repaired) || repaired);
+      } catch {
+        return res.status(502).json({ error: "practice_parse_failed" });
+      }
+    }
+
+    const scopeLabel = parsed.data.videoTitle
+      ? `Lecture: ${parsed.data.videoTitle}`
+      : `Topic: ${parsed.data.topicTitle || parsed.data.topicId}`;
+
+    const set = finalizePracticeSet(parsedSet, {
+      title: `${parsed.data.topicTitle || "Topic"} Practice`,
+      topicTitle: parsed.data.topicTitle || parsed.data.topicId,
+      scopeLabel,
+    });
+
+    if (!set.mcq.length && !set.shortAnswer.length && !set.theory.length) {
+      return res.status(502).json({ error: "practice_empty" });
+    }
+
+    return res.json({ ok: true, data: set });
+  }));
+
+  // POST /api/ai/practice/grade-mcq  { questions: McqQuestion[], answers: { [id]: number } }
+  r.post("/practice/grade-mcq", requireAuth, asyncHandler(async (req, res) => {
+    const bodySchema = z.object({
+      questions: z.array(
+        z.object({
+          id: z.string(),
+          question: z.string(),
+          choices: z.array(z.string()),
+          correctIndex: z.number().int(),
+          explanation: z.string().optional(),
+        })
+      ),
+      answers: z.record(z.string(), z.number().int()),
+    });
+    const parsed = bodySchema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: "invalid_body" });
+
+    const results = parsed.data.questions.map((q) => {
+      const chosen = parsed.data.answers[q.id] ?? -1;
+      const correct = chosen === q.correctIndex;
+      return {
+        id: q.id,
+        correct,
+        chosen,
+        correctIndex: q.correctIndex,
+        explanation: q.explanation || "",
+      };
+    });
+    const score = results.filter((r) => r.correct).length;
+    const total = results.length;
+    return res.json({
+      ok: true,
+      data: {
+        score,
+        total,
+        percent: total ? Math.round((score / total) * 100) : 0,
+        results,
+      },
+    });
   }));
 
   r.post("/quiz", requireAuth, asyncHandler(async (req, res) => {

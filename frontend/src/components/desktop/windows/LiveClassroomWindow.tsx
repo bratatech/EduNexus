@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { normalizeLectureNotes, type HighlightedNote, type LectureNotesData } from "@/lib/lectureNotes";
+import { LectureNotesSummaryView } from "@/components/lecture-notes/LectureNotesSummaryView";
 import jsPDF from "jspdf";
 
 import { Floor, Walls, ClassroomLights, Bench, TeacherDesk, DustParticles } from "./classroom/ClassroomEnvironment";
@@ -23,29 +24,6 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface ChatMsg { id: number; user: string; text: string; time: string; }
-
-function renderSummaryText(summary: string) {
-  return summary.split("\n").map((line, i) => {
-    const trimmed = line.trim();
-    if (!trimmed) return <div key={i} className="h-2" />;
-    const isHeading =
-      /^[A-Z][A-Za-z0-9 /&'()-]{2,48}$/.test(trimmed) &&
-      !trimmed.startsWith("-") &&
-      !/^\d+\./.test(trimmed);
-    if (isHeading) {
-      return (
-        <div key={i} className="text-amber-300/95 text-xs font-semibold tracking-wide mt-3 mb-1 first:mt-0">
-          {trimmed}
-        </div>
-      );
-    }
-    return (
-      <p key={i} className="text-xs text-gray-400 leading-relaxed">
-        {line}
-      </p>
-    );
-  });
-}
 
 // ─── PDF download helper ──────────────────────────────────────────────────────
 function downloadNotesPdf(data: LectureNotesData, videoTitle?: string) {
@@ -95,6 +73,34 @@ function downloadNotesPdf(data: LectureNotesData, videoTitle?: string) {
   doc.save(`${fname}.pdf`);
 }
 
+function HighlightCard({ note, index }: { note: HighlightedNote; index: number }) {
+  const colors = {
+    high: { border: "rgba(239,68,68,0.35)", bg: "rgba(239,68,68,0.08)", tag: "#f87171", label: "Essential" },
+    medium: { border: "rgba(245,158,11,0.35)", bg: "rgba(245,158,11,0.08)", tag: "#fbbf24", label: "Important" },
+    low: { border: "rgba(148,163,184,0.25)", bg: "rgba(148,163,184,0.06)", tag: "#94a3b8", label: "Context" },
+  }[note.importance];
+
+  return (
+    <div
+      className="rounded-lg p-3 flex gap-3"
+      style={{ border: `1px solid ${colors.border}`, background: colors.bg }}
+    >
+      <span
+        className="shrink-0 grid place-items-center h-7 w-7 rounded-md text-[10px] font-mono font-bold"
+        style={{ background: "rgba(0,0,0,0.35)", color: colors.tag }}
+      >
+        {String(index + 1).padStart(2, "0")}
+      </span>
+      <div className="min-w-0 flex-1">
+        <span className="text-[9px] font-mono uppercase tracking-wider" style={{ color: colors.tag }}>
+          {colors.label}
+        </span>
+        <p className="text-xs text-gray-200 leading-relaxed mt-1">{note.note}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Notes panel ─────────────────────────────────────────────────────────────
 interface NotesPanelProps {
   video: ClassroomVideo | null;
@@ -108,7 +114,9 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"summary" | "highlights">("summary");
   const [cached, setCached] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const inFlight = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setNotes(null);
@@ -129,11 +137,14 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
     return () => { cancelled = true; };
   }, [video?.id, video?.topic_id]);
 
-  const generateNotes = useCallback(async () => {
+  const generateNotes = useCallback(async (forceRegenerate = false) => {
     if (!video || inFlight.current) return;
+    const isRegen = forceRegenerate;
     inFlight.current = true;
     setBusy(true);
+    setRegenerating(isRegen);
     setError("");
+    if (isRegen) setCached(false);
     try {
       const r = await api.aiLectureNotes({
         videoUrl: video.youtube_watch_url,
@@ -144,10 +155,13 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
         topicTitle: topic?.title,
         topicDescription: topic?.description,
         videoDescription: video.description,
-      }) as { ok: boolean; data: LectureNotesData; cached?: boolean };
+        regenerate: isRegen,
+      }) as { ok: boolean; data: LectureNotesData; cached?: boolean; regenerated?: boolean };
       if (r?.data) {
         setNotes(normalizeLectureNotes(r.data, video.title));
-        setCached(!!r.cached);
+        setCached(!!r.cached && !r.regenerated);
+        setActiveTab("summary");
+        requestAnimationFrame(() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }));
       }
     } catch (e: unknown) {
       const code = e instanceof Error ? e.message : "generation_failed";
@@ -159,13 +173,15 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
         ai_timeout: "Video analysis took too long. Please retry — first run can take 2–4 minutes.",
         gemini_unavailable: "Gemini AI is unreachable. Check API key and connectivity.",
         invalid_body: "Invalid lecture video URL.",
+        notes_generation_failed: "Notes were incomplete. Click Regenerate to try again.",
       };
       setError(friendly[code] || code);
     } finally {
       inFlight.current = false;
       setBusy(false);
+      setRegenerating(false);
     }
-  }, [video, topic, classroomId]);
+  }, [video, topic, classroomId, notes]);
 
   if (!video) {
     return (
@@ -201,11 +217,22 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
         )}
       </div>
 
+      {notes && !notes.summary?.trim() && !busy && (
+        <div className="px-4 py-3 text-xs text-amber-400/90 border-b border-amber-500/20 bg-amber-500/5">
+          Notes are empty for this lecture. Click Regenerate to generate full structured notes (2–4 min).
+        </div>
+      )}
+
       {notes ? (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {cached && (
+          {busy && regenerating && (
+            <div className="px-4 py-2 text-[10px] font-mono text-amber-400/90" style={{ background: "rgba(245,158,11,0.08)" }}>
+              Regenerating with Gemini — usually takes 2–4 minutes
+            </div>
+          )}
+          {cached && !busy && (
             <div className="px-4 py-1.5 text-[10px] font-mono text-green-400/80" style={{ background: "rgba(74,222,128,0.06)" }}>
-              Saved notes loaded
+              Saved notes — Regenerate below for fresh, expanded notes
             </div>
           )}
           <div className="flex border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
@@ -225,11 +252,30 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
             ))}
           </div>
 
-          <div className="flex-1 overflow-auto p-4">
+          <div ref={scrollRef} className="flex-1 overflow-auto p-4 relative">
+            {busy && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center" style={{ background: "rgba(10,10,16,0.72)" }}>
+                <div className="text-center px-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-amber-400 mx-auto mb-2" />
+                  <p className="text-xs font-mono text-amber-300/90">
+                    {regenerating ? "Regenerating lecture notes…" : "Generating lecture notes…"}
+                  </p>
+                </div>
+              </div>
+            )}
             {activeTab === "summary" ? (
               <div>
-                <div className="text-amber-400 text-sm font-medium mb-3">{notes.title}</div>
-                <div className="space-y-0.5">{renderSummaryText(notes.summary)}</div>
+                <div
+                  className="rounded-lg px-3 py-2.5 mb-4"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.04))",
+                    border: "1px solid rgba(245,158,11,0.22)",
+                  }}
+                >
+                  <p className="text-[10px] font-mono uppercase tracking-widest text-amber-500/80 mb-1">Lecture</p>
+                  <h2 className="text-sm font-medium text-amber-100 leading-snug">{notes.title}</h2>
+                </div>
+                <LectureNotesSummaryView summary={notes.summary} />
               </div>
             ) : (
               <div className="space-y-2">
@@ -238,35 +284,22 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
                     No highlights yet. Use &quot;Regenerate notes&quot; below to create key points.
                   </p>
                 )}
-                {(notes.highlighted_notes || []).map((n, i) => {
-                  const colors = {
-                    high: { border: "rgba(239,68,68,0.3)", bg: "rgba(239,68,68,0.07)", tag: "rgba(239,68,68,0.9)", label: "HIGH" },
-                    medium: { border: "rgba(245,158,11,0.3)", bg: "rgba(245,158,11,0.07)", tag: "rgba(245,158,11,0.9)", label: "MED" },
-                    low: { border: "rgba(148,163,184,0.2)", bg: "rgba(148,163,184,0.05)", tag: "rgba(148,163,184,0.6)", label: "LOW" },
-                  }[n.importance];
-                  return (
-                    <div key={i} className="rounded-md p-3" style={{ border: `1px solid ${colors.border}`, background: colors.bg }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono uppercase tracking-wider" style={{ color: colors.tag }}>{colors.label}</span>
-                        <span className="text-[10px] font-mono text-gray-600">#{String(i + 1).padStart(2, "0")}</span>
-                      </div>
-                      <p className="text-xs text-gray-300 leading-relaxed">{n.note}</p>
-                    </div>
-                  );
-                })}
+                {(notes.highlighted_notes || []).map((n, i) => (
+                  <HighlightCard key={i} note={n} index={i} />
+                ))}
               </div>
             )}
           </div>
 
           <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
             <button
-              onClick={generateNotes}
+              onClick={() => generateNotes(true)}
               disabled={busy}
               className="w-full flex items-center justify-center gap-2 py-2 rounded-md text-xs font-mono"
-              style={{ border: "1px solid rgba(245,158,11,0.3)", color: "#fbbf24" }}
+              style={{ border: "1px solid rgba(245,158,11,0.3)", color: busy ? "rgba(251,191,36,0.5)" : "#fbbf24" }}
             >
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              Regenerate notes
+              {busy ? "Regenerating…" : "Regenerate notes"}
             </button>
           </div>
         </div>
@@ -291,7 +324,7 @@ function NotesPanel({ video, topic, classroomId }: NotesPanelProps) {
             Generate detailed, structured notes for this lecture video using Gemini AI.
           </div>
           <button
-            onClick={generateNotes}
+            onClick={() => generateNotes(false)}
             disabled={busy}
             className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all"
             style={{

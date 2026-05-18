@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Minus, Square, X, Maximize2 } from "lucide-react";
-import { useWindowManager, type WindowId } from "@/lib/window-manager";
+import {
+  useWindowManager,
+  clampWindowSize,
+  getViewportWorkArea,
+  WINDOW_TITLE_BAR_H,
+  type WindowId,
+} from "@/lib/window-manager";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -65,12 +71,21 @@ export function Window({ id, children }: Props) {
       if (r.dir.includes("s")) newH = r.oh + dy;
       if (r.dir.includes("n")) { newH = r.oh - dy; newY = r.oy + dy; }
 
+      const vp = getViewportWorkArea();
+      const maxW = Math.min(w.maxSize?.w ?? vp.w, vp.w);
+      const maxH = Math.min(w.maxSize?.h ?? vp.h, vp.h);
       const minW = w.minSize.w;
       const minH = w.minSize.h;
+
       if (newW < minW) { if (r.dir.includes("w")) newX = r.ox + r.ow - minW; newW = minW; }
       if (newH < minH) { if (r.dir.includes("n")) newY = r.oy + r.oh - minH; newH = minH; }
+      if (newW > maxW) { if (r.dir.includes("w")) newX = r.ox + r.ow - maxW; newW = maxW; }
+      if (newH > maxH) { if (r.dir.includes("n")) newY = r.oy + r.oh - maxH; newH = maxH; }
 
-      resize(id, { w: newW, h: newH });
+      newY = Math.max(WINDOW_TITLE_BAR_H, newY);
+
+      const clamped = clampWindowSize(w, { w: newW, h: newH });
+      resize(id, clamped);
       if (r.dir.includes("w") || r.dir.includes("n")) move(id, { x: newX, y: newY });
     }
     function onUp() {
@@ -85,7 +100,7 @@ export function Window({ id, children }: Props) {
         window.removeEventListener("pointerup", onUp);
       };
     }
-  }, [resizing, id, move, resize, w.minSize]);
+  }, [resizing, id, move, resize, w]);
 
   // ESC to close
   useEffect(() => {
