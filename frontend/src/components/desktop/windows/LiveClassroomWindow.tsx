@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, Suspense } from "react";
+import { useEffect, useMemo, useState, useRef, Suspense, Component, type ReactNode, type ErrorInfo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Text, Environment } from "@react-three/drei";
 import { Window } from "../Window";
@@ -64,7 +64,6 @@ function Whiteboard() {
         fontSize={0.35}
         color="#e8d5c0"
         anchorX="left"
-        font="https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4xD-IQ-PuZJJXxfpAO-Lfjk.woff"
       >
         EduNexuZ — Live Session
       </Text>
@@ -272,6 +271,31 @@ interface ChatMsg {
   text: string;
   time: string;
 }
+
+// ── Error boundary so a Three.js crash shows a friendly message ──────────
+interface EBState { hasError: boolean; msg: string }
+class CanvasErrorBoundary extends Component<{ children: ReactNode }, EBState> {
+  state: EBState = { hasError: false, msg: "" };
+  static getDerivedStateFromError(err: Error): EBState {
+    return { hasError: true, msg: err?.message || "render_error" };
+  }
+  componentDidCatch(_err: Error, _info: ErrorInfo) {}
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
+          <div className="text-center px-6">
+            <div className="text-4xl mb-4">⚠️</div>
+            <div className="text-amber-400 font-mono text-sm mb-1">3D scene failed to render</div>
+            <div className="text-gray-500 font-mono text-xs">{this.state.msg}</div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 export function LiveClassroomWindow() {
   const [muted, setMuted] = useState(true);
@@ -687,30 +711,32 @@ export function LiveClassroomWindow() {
       <div className="flex h-full" style={{ background: "#0a0a0f" }}>
         {/* 3D Viewport */}
         <div className="flex-1 relative">
-          <Suspense
-            fallback={
-              <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
-                <div className="text-center">
-                  <div className="text-4xl mb-4 animate-pulse">🎓</div>
-                  <div className="text-amber-400 font-mono text-sm">Loading 3D Classroom...</div>
-                  <div
-                    className="mt-2 w-32 h-1 rounded-full overflow-hidden mx-auto"
-                    style={{ background: "#222" }}
-                  >
-                    <div className="h-full bg-amber-500 animate-pulse rounded-full" style={{ width: "60%" }} />
+          <CanvasErrorBoundary>
+            <Suspense
+              fallback={
+                <div className="absolute inset-0 flex items-center justify-center" style={{ background: "#0a0a0f" }}>
+                  <div className="text-center">
+                    <div className="text-4xl mb-4 animate-pulse">🎓</div>
+                    <div className="text-amber-400 font-mono text-sm">Loading 3D Classroom...</div>
+                    <div
+                      className="mt-2 w-32 h-1 rounded-full overflow-hidden mx-auto"
+                      style={{ background: "#222" }}
+                    >
+                      <div className="h-full bg-amber-500 animate-pulse rounded-full" style={{ width: "60%" }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            }
-          >
-            <Canvas
-              shadows
-              camera={{ position: [0, 6, 10], fov: 50 }}
-              style={{ background: "#0a0a0f" }}
+              }
             >
-              <ClassroomScene />
-            </Canvas>
-          </Suspense>
+              <Canvas
+                shadows
+                camera={{ position: [0, 6, 10], fov: 50 }}
+                style={{ background: "#0a0a0f" }}
+              >
+                <ClassroomScene />
+              </Canvas>
+            </Suspense>
+          </CanvasErrorBoundary>
 
           {/* Video overlay */}
           {(localPreviewStream || Object.keys(remoteStreams).length > 0) && (

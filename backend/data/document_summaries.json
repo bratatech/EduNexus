@@ -1,5 +1,16 @@
 [
   {
+    "id": "f1b7b42b-c9b3-44da-ab01-c35f75c62258",
+    "wallet": "soumya",
+    "filename": "Module_9_Amortized_Analysis.ppt.pdf",
+    "mimetype": "application/pdf",
+    "title": "Module_9_Amortized_Analysis.ppt.pdf",
+    "classroom_id": null,
+    "created_at": "2026-05-09T17:00:52.939Z",
+    "summary": "```json\n{\n  \"title\": \"Module 9: Amortized Analysis\",\n  \"summary\": \"The document titled 'Module 9: Amortized Analysis.ppt.pdf' was submitted for summarization. Unfortunately, the automated text extraction process encountered significant difficulties, rendering the content unreadable. The document largely consists of corrupted data, including non-decipherable characters and repetitive patterns, rather than coherent academic text. As a result, it is impossible to accurately identify or synthesize information regarding the principles of amortized analysis, key definitions, important formulas, or common pitfalls typically covered in such a module. Therefore, a comprehensive summary and detailed highlighted notes cannot be provided due to the complete inability to access any meaningful textual content within this PDF.\",\n  \"highlightedNotes\": [\n    {\n      \"note\": \"The document content is unreadable due to severe text extraction issues, preventing the identification of any key definitions, formulas, steps, or pitfalls related to Amortized Analysis.\",\n      \"importance\": \"high\"\n    }\n  ]\n}\n```",
+    "highlighted_notes": []
+  },
+  {
     "id": "cbf59f27-4912-41d5-a620-31517f8cfc5d",
     "wallet": "soumya",
     "filename": "Cormen.pdf",
